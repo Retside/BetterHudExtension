@@ -1,6 +1,6 @@
 plugins {
-    kotlin("jvm") version "2.0.21"
-    id("com.typewritermc.module-plugin") version "1.3.0"
+    kotlin("jvm") version "2.2.10"
+    id("com.typewritermc.module-plugin") version "2.0.0"
 }
 
 group = "me.newtale"
@@ -21,7 +21,7 @@ typewriter {
             |Created by Ney.
             |Discord: ney___
             """.trimMargin()
-        engineVersion = "0.9.0-beta-163"
+        engineVersion = "0.9.0-beta-164"
         channel = com.typewritermc.moduleplugin.ReleaseChannel.BETA
         dependencies {
             paper()

@@ -64,7 +64,7 @@ class BetterHudOptionEntry(
     }
 
     fun playDialogueSound(player: Player, context: InteractionContext) {
-        player.playSound(sound.get(player, context))
+        player.playSound(sound.get(player, context), context)
     }
 
     fun stopDialogueSound(player: Player, context: InteractionContext) {

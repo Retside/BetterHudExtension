@@ -12,8 +12,6 @@ import com.typewritermc.engine.paper.entry.Criteria
 import com.typewritermc.engine.paper.entry.Modifier
 import com.typewritermc.engine.paper.entry.TriggerableEntry
 import com.typewritermc.engine.paper.entry.dialogue.DialogueMessenger
-import com.typewritermc.engine.paper.entry.entries.ActionEntry
-import com.typewritermc.engine.paper.entry.entries.ActionTrigger
 import com.typewritermc.engine.paper.entry.entries.ConstVar
 import com.typewritermc.engine.paper.entry.entries.DialogueEntry
 import com.typewritermc.engine.paper.entry.entries.SpeakerEntry
@@ -58,7 +56,7 @@ class BetterHudSpokenEntry(
         return BetterHudSpokenDialogueMessenger(player, context, this)
     }
     fun playDialogueSound(player: Player, context: InteractionContext) {
-        player.playSound(sound.get(player, context))
+        player.playSound(sound.get(player, context), context)
     }
 
     fun stopDialogueSound(player: Player, context: InteractionContext) {
