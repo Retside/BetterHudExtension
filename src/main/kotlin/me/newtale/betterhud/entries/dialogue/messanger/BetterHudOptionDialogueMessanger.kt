@@ -61,8 +61,6 @@ class BetterHudOptionDialogueMessenger(
     private var popupId = ""
 
     private val logger = Logger.getLogger("BetterHudDialogue")
-    private val miniMessage = MiniMessage.miniMessage()
-    private val legacySerializer = LegacyComponentSerializer.legacySection()
 
     override val eventTriggers: List<EventTrigger>
         get() = entry.eventTriggers + (selected?.eventTriggers ?: emptyList())
@@ -77,8 +75,8 @@ class BetterHudOptionDialogueMessenger(
         }
 
     private fun createPressButtonText(): String {
-        val sneakKey = confirmationKey
-        return "Прокрутіть для вибору, <yellow>$sneakKey</yellow> для підтвердження"
+        val key = confirmationKey
+        return "Прокрутіть для вибору, <yellow>$key</yellow> для підтвердження"
     }
 
     override fun init() {

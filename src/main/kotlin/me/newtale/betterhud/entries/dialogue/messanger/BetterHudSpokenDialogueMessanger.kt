@@ -8,8 +8,6 @@ import kr.toxicity.hud.api.bukkit.event.CustomPopupEvent
 import kr.toxicity.hud.api.bukkit.update.BukkitEventUpdateEvent
 import kr.toxicity.hud.api.player.HudPlayer
 import me.newtale.betterhud.entries.dialogue.BetterHudSpokenEntry
-import net.kyori.adventure.text.minimessage.MiniMessage
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import org.bukkit.entity.Player
 import java.time.Duration
 import java.util.logging.Logger
@@ -34,19 +32,12 @@ class BetterHudSpokenDialogueMessenger(
     private var popupId = ""
 
     private val logger = Logger.getLogger("BetterHudDialogue")
-    private val miniMessage = MiniMessage.miniMessage()
-    private val legacySerializer = LegacyComponentSerializer.legacySection()
 
     override var isCompleted: Boolean
         get() = playedTime >= typingDuration
         set(value) {
             playedTime = if (!value) Duration.ZERO else typingDuration
         }
-
-    private fun createPressButtonText(): String {
-        val sneakKey = confirmationKey
-        return "Натисніть <yellow>$sneakKey</yellow>, щоб продовжити"
-    }
 
     override fun init() {
         super.init()
@@ -71,7 +62,7 @@ class BetterHudSpokenDialogueMessenger(
                 ?: throw IllegalStateException("Popup ‘$popupId’ not found")
 
             confirmationKeyHandler = confirmationKey.handler(player) {
-                handleConfirmationKey()
+                completeOrFinish()
             }
 
             entry.playDialogueSound(player, context)
@@ -80,22 +71,6 @@ class BetterHudSpokenDialogueMessenger(
             logger.warning("BetterHud initialization error for ${player.name}: ${e.message}")
             player.sendMessage("§cDialog initialization error: ${e.message}")
             state = MessengerState.CANCELLED
-        }
-    }
-
-    private fun handleConfirmationKey() {
-        when {
-            !isCompleted -> {
-                isCompleted = true
-                updatePopup(text, 1.0)
-            }
-            else -> {
-                if (eventTriggers.isNotEmpty()) {
-                    state = MessengerState.FINISHED
-                } else {
-                    completeOrFinish()
-                }
-            }
         }
     }
 
@@ -148,8 +123,6 @@ class BetterHudSpokenDialogueMessenger(
             put("instruction", if (canFinish) "finish" else "continue")
             put("is_complete", isComplete.toString())
 
-            put("pressbutton", if (isComplete) createPressButtonText() else "")
-
             put("raw_text", rawText)
             put("total_chars", rawText.length.toString())
             put("visible_chars", getCurrentTextLength(percentage).toString())
@@ -159,7 +132,6 @@ class BetterHudSpokenDialogueMessenger(
             put("typewriter_show", "true")
             put("typewriter_progress", (percentage * 100).toInt().toString())
             put("typewriter_instruction", if (canFinish) "finish" else "continue")
-            put("typewriter_pressbutton", if (isComplete) createPressButtonText() else "")
         }
 
         entry.customVariables.forEach { (key, value) ->
@@ -186,9 +158,7 @@ class BetterHudSpokenDialogueMessenger(
     override fun dispose() {
         super.dispose()
 
-        if (state == MessengerState.FINISHED) {
-            entry.stopDialogueSound(player, context)
-        }
+        entry.stopDialogueSound(player, context)
 
         hudPlayer?.let { player ->
             popup?.hide(player)

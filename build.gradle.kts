@@ -21,7 +21,7 @@ typewriter {
             |Created by Ney.
             |Discord: ney___
             """.trimMargin()
-        engineVersion = "0.9.0-beta-164"
+        engineVersion = "0.9.0-beta-165"
         channel = com.typewritermc.moduleplugin.ReleaseChannel.BETA
         dependencies {
             paper()
