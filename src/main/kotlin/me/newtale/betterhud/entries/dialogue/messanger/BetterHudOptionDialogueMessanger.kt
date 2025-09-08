@@ -68,7 +68,7 @@ class BetterHudOptionDialogueMessenger(
     override val modifiers: List<Modifier>
         get() = entry.modifiers + (selected?.modifiers ?: emptyList())
 
-    override var isCompleted: Boolean
+    override var animationComplete: Boolean
         get() = playTime >= totalDuration
         set(value) {
             playTime = if (!value) Duration.ZERO else totalDuration
@@ -157,7 +157,7 @@ class BetterHudOptionDialogueMessenger(
         }
 
         if (usableOptions.isEmpty()) {
-            isCompleted = true
+            animationComplete = true
             state = MessengerState.FINISHED
             return
         }

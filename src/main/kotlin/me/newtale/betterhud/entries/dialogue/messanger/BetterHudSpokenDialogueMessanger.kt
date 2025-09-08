@@ -33,7 +33,7 @@ class BetterHudSpokenDialogueMessenger(
 
     private val logger = Logger.getLogger("BetterHudDialogue")
 
-    override var isCompleted: Boolean
+    override var animationComplete: Boolean
         get() = playedTime >= typingDuration
         set(value) {
             playedTime = if (!value) Duration.ZERO else typingDuration
@@ -77,7 +77,7 @@ class BetterHudSpokenDialogueMessenger(
     override fun tick(context: TickContext) {
         if (state != MessengerState.RUNNING) return
 
-        if (!isCompleted) {
+        if (!animationComplete) {
             playedTime += context.deltaTime
         }
 

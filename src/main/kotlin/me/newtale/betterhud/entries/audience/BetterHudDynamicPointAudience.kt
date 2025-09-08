@@ -11,6 +11,7 @@ import com.typewritermc.engine.paper.entry.matches
 import com.typewritermc.engine.paper.entry.entries.*
 import com.typewritermc.engine.paper.utils.toBukkitWorld
 import com.typewritermc.engine.paper.facts.FactListenerSubscription
+import com.typewritermc.engine.paper.facts.FactUpdateContext
 import com.typewritermc.engine.paper.facts.listenForFacts
 import com.typewritermc.engine.paper.plugin
 import com.typewritermc.quest.QuestEntry
@@ -104,8 +105,8 @@ class CompassPointDisplay(
         )
     }
 
-    private fun onFactChange(player: Player, fact: Ref<ReadableFactEntry>) {
-        player.refresh()
+    private fun onFactChange(context: FactUpdateContext) {
+        context.player.refresh()
     }
 
     @EventHandler
