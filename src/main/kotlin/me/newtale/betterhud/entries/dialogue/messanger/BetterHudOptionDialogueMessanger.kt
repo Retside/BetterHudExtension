@@ -9,6 +9,7 @@ import com.typewritermc.engine.paper.entry.dialogue.*
 import com.typewritermc.engine.paper.entry.entries.EventTrigger
 import com.typewritermc.engine.paper.entry.matches
 import com.typewritermc.engine.paper.extensions.placeholderapi.parsePlaceholders
+import com.typewritermc.engine.paper.snippets.snippet
 import com.typewritermc.engine.paper.utils.*
 import kr.toxicity.hud.api.bukkit.event.CustomPopupEvent
 import kr.toxicity.hud.api.bukkit.update.BukkitEventUpdateEvent
@@ -27,6 +28,10 @@ import org.bukkit.event.player.PlayerItemHeldEvent
 import java.time.Duration
 import java.util.logging.Logger
 import kotlin.math.min
+
+val option_sound: String by snippet("betterhud.option.sound", "block.lever.click")
+val option_sound_volume: Float by snippet("betterhud.option.volume", 1f)
+val option_sound_pitch: Float by snippet("betterhud.option.pitch", 2f)
 
 class BetterHudOptionDialogueMessenger(
     player: Player,
@@ -162,7 +167,7 @@ class BetterHudOptionDialogueMessenger(
 
         selectedIndex = newIndex
 
-        player.playSound(Sound.sound(Key.key("block.lever.click"), Sound.Source.MASTER, 1f, 2f))
+        player.playSound(Sound.sound(Key.key(option_sound), Sound.Source.MASTER, option_sound_volume, option_sound_pitch))
 
         forceUpdatePopup()
     }

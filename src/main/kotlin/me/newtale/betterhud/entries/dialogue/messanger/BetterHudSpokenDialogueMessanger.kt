@@ -14,6 +14,7 @@ import java.time.Duration
 import java.util.logging.Logger
 import me.newtale.betterhud.utils.reconstructMiniMessageText
 import me.newtale.betterhud.utils.stripMiniMessage
+import kotlin.math.abs
 
 class BetterHudSpokenDialogueMessenger(
     player: Player,
@@ -121,7 +122,7 @@ class BetterHudSpokenDialogueMessenger(
         val percentage = typingDurationType.calculatePercentage(playedTime, typingDuration, rawText)
         val currentText = getCurrentText(percentage)
 
-        if (currentText != lastDisplayedText || Math.abs(percentage - lastPercentage) > 0.01) {
+        if (currentText != lastDisplayedText || abs(percentage - lastPercentage) > 0.01) {
             updatePopup(currentText, percentage)
             lastDisplayedText = currentText
             lastPercentage = percentage
