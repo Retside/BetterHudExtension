@@ -13,6 +13,7 @@ import com.typewritermc.engine.paper.utils.*
 import kr.toxicity.hud.api.bukkit.event.CustomPopupEvent
 import kr.toxicity.hud.api.bukkit.update.BukkitEventUpdateEvent
 import kr.toxicity.hud.api.player.HudPlayer
+import kr.toxicity.hud.api.popup.PopupUpdater
 import me.newtale.betterhud.entries.dialogue.BetterHudOptionEntry
 import me.newtale.betterhud.entries.dialogue.Option
 import me.newtale.betterhud.entries.dialogue.OptionContextKeys
@@ -20,8 +21,6 @@ import me.newtale.betterhud.utils.reconstructMiniMessageText
 import me.newtale.betterhud.utils.stripMiniMessage
 import net.kyori.adventure.key.Key
 import net.kyori.adventure.sound.Sound
-import net.kyori.adventure.text.minimessage.MiniMessage
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.player.PlayerItemHeldEvent
@@ -57,8 +56,12 @@ class BetterHudOptionDialogueMessenger(
 
     private var hudPlayer: HudPlayer? = null
     private var popup: kr.toxicity.hud.api.popup.Popup? = null
+    private var popupUpdater: PopupUpdater? = null
     private var lastDisplayedState = ""
     private var popupId = ""
+    private var isPopupShown = false
+
+    private var lastUpdateEvent: CustomPopupEvent? = null
 
     private val logger = Logger.getLogger("BetterHudDialogue")
 
@@ -111,10 +114,34 @@ class BetterHudOptionDialogueMessenger(
 
             entry.playDialogueSound(player, context)
 
+            showPopupInitially()
+
         } catch (e: Exception) {
             logger.warning("BetterHud initialization error for ${player.name}: ${e.message}")
             player.sendMessage("§cDialog initialization error: ${e.message}")
             state = MessengerState.CANCELLED
+        }
+    }
+
+    private fun showPopupInitially() {
+        val hudPlayerRef = hudPlayer ?: return
+        val popupRef = popup ?: return
+
+        try {
+            val event = createCustomPopupEvent()
+            val updateEvent = BukkitEventUpdateEvent(event, "dialogue_${System.currentTimeMillis()}")
+
+            popupUpdater = popupRef.show(updateEvent, hudPlayerRef)
+            isPopupShown = popupUpdater != null
+            lastUpdateEvent = event
+
+            if (!isPopupShown) {
+                logger.warning("Failed to show popup for ${player.name}")
+            }
+
+        } catch (e: Exception) {
+            logger.warning("Failed to show popup initially for ${player.name}: ${e.message}")
+            isPopupShown = false
         }
     }
 
@@ -162,11 +189,11 @@ class BetterHudOptionDialogueMessenger(
             return
         }
 
-        if (playTime.toTicks() % 100 > 0 && completedAnimation && !isFirst && !forceSend) {
+        if (playTime.toTicks() % 2 > 0 && completedAnimation && !isFirst && !forceSend) {
             return
         }
 
-        updatePopupWithCurrentState()
+        updatePopupWithCurrentState(forceSend)
     }
 
     private fun forceUpdatePopup() {
@@ -174,10 +201,12 @@ class BetterHudOptionDialogueMessenger(
     }
 
     private fun updatePopupWithCurrentState(force: Boolean = false) {
+        if (!isPopupShown) return
+
         val currentState = generateCurrentState()
 
         if (force || currentState != lastDisplayedState) {
-            updatePopup(currentState)
+            updatePopup()
             lastDisplayedState = currentState
         }
     }
@@ -186,24 +215,41 @@ class BetterHudOptionDialogueMessenger(
         return "${playTime.toMillis()}_${selectedIndex}_${usableOptions.size}_${completedAnimation}"
     }
 
-    private fun updatePopup(stateInfo: String) {
-        val hudPlayerRef = hudPlayer ?: return
-        val popupRef = popup ?: return
+    private fun updatePopup() {
+        val updater = popupUpdater ?: return
 
         try {
-            popupRef.hide(hudPlayerRef)
-
-            val event = CustomPopupEvent(player, popupId).apply {
-                variables.clear()
-                addDialogueVariables(this)
+            val event = lastUpdateEvent
+            if (event != null) {
+                event.variables.clear()
+                addDialogueVariables(event)
             }
 
-            val updateEvent = BukkitEventUpdateEvent(event, "dialogue_${System.currentTimeMillis()}")
-            popupRef.show(updateEvent, hudPlayerRef)
+            val success = updater.update()
+
+            if (!success) {
+                logger.info("Popup update failed for ${player.name}")
+            }
 
         } catch (e: Exception) {
-            logger.warning("Popup update error fo ${player.name}: ${e.message}")
+            logger.warning("Popup update error for ${player.name}: ${e.message}")
         }
+    }
+
+    private fun hidePopup() {
+        hudPlayer?.let { player ->
+            popup?.hide(player)
+        }
+        popupUpdater = null
+        isPopupShown = false
+        lastUpdateEvent = null
+    }
+
+    private fun createCustomPopupEvent(): CustomPopupEvent {
+        val event = CustomPopupEvent(player, popupId)
+        event.variables.clear()
+        addDialogueVariables(event)
+        return event
     }
 
     private fun addDialogueVariables(event: CustomPopupEvent) {
@@ -391,9 +437,7 @@ class BetterHudOptionDialogueMessenger(
 
         entry.stopDialogueSound(player, context)
 
-        hudPlayer?.let { player ->
-            popup?.hide(player)
-        }
+        hidePopup()
 
         confirmationKeyHandler?.dispose()
         confirmationKeyHandler = null

@@ -7,6 +7,7 @@ import com.typewritermc.engine.paper.extensions.placeholderapi.parsePlaceholders
 import kr.toxicity.hud.api.bukkit.event.CustomPopupEvent
 import kr.toxicity.hud.api.bukkit.update.BukkitEventUpdateEvent
 import kr.toxicity.hud.api.player.HudPlayer
+import kr.toxicity.hud.api.popup.PopupUpdater
 import me.newtale.betterhud.entries.dialogue.BetterHudSpokenEntry
 import org.bukkit.entity.Player
 import java.time.Duration
@@ -26,10 +27,16 @@ class BetterHudSpokenDialogueMessenger(
     private var rawText = ""
     private var typingDuration = Duration.ZERO
     private var playedTime = Duration.ZERO
+
     private var hudPlayer: HudPlayer? = null
     private var popup: kr.toxicity.hud.api.popup.Popup? = null
+    private var popupUpdater: PopupUpdater? = null
     private var lastDisplayedText = ""
     private var popupId = ""
+    private var isPopupShown = false
+
+    private var lastUpdateEvent: CustomPopupEvent? = null
+    private var lastPercentage = -1.0
 
     private val logger = Logger.getLogger("BetterHudDialogue")
 
@@ -59,13 +66,15 @@ class BetterHudSpokenDialogueMessenger(
                 ?: throw IllegalStateException("HudPlayer not found")
 
             popup = api.popupManager.getPopup(popupId)
-                ?: throw IllegalStateException("Popup ‘$popupId’ not found")
+                ?: throw IllegalStateException("Popup '$popupId' not found")
 
             confirmationKeyHandler = confirmationKey.handler(player) {
                 completeOrFinish()
             }
 
             entry.playDialogueSound(player, context)
+
+            showPopupInitially()
 
         } catch (e: Exception) {
             logger.warning("BetterHud initialization error for ${player.name}: ${e.message}")
@@ -74,8 +83,36 @@ class BetterHudSpokenDialogueMessenger(
         }
     }
 
+    private fun showPopupInitially() {
+        val hudPlayerRef = hudPlayer ?: return
+        val popupRef = popup ?: return
+
+        try {
+            val percentage = typingDurationType.calculatePercentage(playedTime, typingDuration, rawText)
+            val currentText = getCurrentText(percentage)
+
+            val event = createCustomPopupEvent(currentText, percentage)
+            val updateEvent = BukkitEventUpdateEvent(event, "dialogue_${System.currentTimeMillis()}")
+
+            popupUpdater = popupRef.show(updateEvent, hudPlayerRef)
+            isPopupShown = popupUpdater != null
+            lastUpdateEvent = event
+            lastDisplayedText = currentText
+            lastPercentage = percentage
+
+            if (!isPopupShown) {
+                logger.warning("Failed to show popup for ${player.name}")
+            }
+
+        } catch (e: Exception) {
+            logger.warning("Failed to show popup initially for ${player.name}: ${e.message}")
+            isPopupShown = false
+        }
+    }
+
     override fun tick(context: TickContext) {
         if (state != MessengerState.RUNNING) return
+        if (!isPopupShown) return
 
         if (!animationComplete) {
             playedTime += context.deltaTime
@@ -84,30 +121,48 @@ class BetterHudSpokenDialogueMessenger(
         val percentage = typingDurationType.calculatePercentage(playedTime, typingDuration, rawText)
         val currentText = getCurrentText(percentage)
 
-        if (currentText != lastDisplayedText) {
+        if (currentText != lastDisplayedText || Math.abs(percentage - lastPercentage) > 0.01) {
             updatePopup(currentText, percentage)
             lastDisplayedText = currentText
+            lastPercentage = percentage
         }
     }
 
     private fun updatePopup(currentText: String, percentage: Double) {
-        val hudPlayerRef = hudPlayer ?: return
-        val popupRef = popup ?: return
+        val updater = popupUpdater ?: return
 
         try {
-            popupRef.hide(hudPlayerRef)
-
-            val event = CustomPopupEvent(player, popupId).apply {
-                variables.clear()
-                addDialogueVariables(this, currentText, percentage)
+            val event = lastUpdateEvent
+            if (event != null) {
+                event.variables.clear()
+                addDialogueVariables(event, currentText, percentage)
             }
 
-            val updateEvent = BukkitEventUpdateEvent(event, "dialogue_${System.currentTimeMillis()}")
-            popupRef.show(updateEvent, hudPlayerRef)
+            val success = updater.update()
+
+            if (!success) {
+                logger.info("Popup update failed for ${player.name}")
+            }
 
         } catch (e: Exception) {
-            logger.warning("Помилка оновлення popup для ${player.name}: ${e.message}")
+            logger.warning("Popup update error for ${player.name}: ${e.message}")
         }
+    }
+
+    private fun hidePopup() {
+        hudPlayer?.let { player ->
+            popup?.hide(player)
+        }
+        popupUpdater = null
+        isPopupShown = false
+        lastUpdateEvent = null
+    }
+
+    private fun createCustomPopupEvent(currentText: String, percentage: Double): CustomPopupEvent {
+        val event = CustomPopupEvent(player, popupId)
+        event.variables.clear()
+        addDialogueVariables(event, currentText, percentage)
+        return event
     }
 
     private fun addDialogueVariables(event: CustomPopupEvent, currentText: String, percentage: Double) {
@@ -154,15 +209,12 @@ class BetterHudSpokenDialogueMessenger(
         return (rawText.length * progress).toInt().coerceIn(0, rawText.length)
     }
 
-
     override fun dispose() {
         super.dispose()
 
         entry.stopDialogueSound(player, context)
 
-        hudPlayer?.let { player ->
-            popup?.hide(player)
-        }
+        hidePopup()
 
         confirmationKeyHandler?.dispose()
         confirmationKeyHandler = null
