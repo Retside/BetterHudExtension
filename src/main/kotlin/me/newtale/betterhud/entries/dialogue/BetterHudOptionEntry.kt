@@ -3,6 +3,7 @@ package me.newtale.betterhud.entries.dialogue
 import com.typewritermc.core.books.pages.Colors
 import com.typewritermc.core.entries.Ref
 import com.typewritermc.core.entries.emptyRef
+import com.typewritermc.core.extension.annotations.ContextKeys
 import com.typewritermc.core.extension.annotations.Entry
 import com.typewritermc.core.extension.annotations.Help
 import com.typewritermc.core.extension.annotations.KeyType
@@ -29,6 +30,7 @@ import java.time.Duration
 import kotlin.reflect.KClass
 
 @Entry("betterhud_option", "Option dialogue with BetterHud popup", Colors.CYAN, "mdi:format-list-numbered")
+@ContextKeys(OptionContextKeys::class)
 class BetterHudOptionEntry(
     override val id: String = "",
     override val name: String = "",

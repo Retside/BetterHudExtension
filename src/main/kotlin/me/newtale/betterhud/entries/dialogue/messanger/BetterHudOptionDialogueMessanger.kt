@@ -92,6 +92,7 @@ class BetterHudOptionDialogueMessenger(
 
         try {
             usableOptions = entry.options.filter { it.criteria.matches(player, context) }
+            selectedIndex = 0
 
             val speaker = entry.speaker.get()
             speakerDisplayName = speaker?.displayName?.get(player)?.parsePlaceholders(player) ?: "Unknown"
