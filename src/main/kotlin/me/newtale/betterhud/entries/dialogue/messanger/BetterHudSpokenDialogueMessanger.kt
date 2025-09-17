@@ -4,6 +4,7 @@ import kr.toxicity.hud.api.BetterHudAPI
 import com.typewritermc.core.interaction.InteractionContext
 import com.typewritermc.engine.paper.entry.dialogue.*
 import com.typewritermc.engine.paper.extensions.placeholderapi.parsePlaceholders
+import com.typewritermc.engine.paper.snippets.snippet
 import kr.toxicity.hud.api.bukkit.event.CustomPopupEvent
 import kr.toxicity.hud.api.bukkit.update.BukkitEventUpdateEvent
 import kr.toxicity.hud.api.player.HudPlayer
@@ -15,6 +16,8 @@ import java.util.logging.Logger
 import me.newtale.betterhud.utils.reconstructMiniMessageText
 import me.newtale.betterhud.utils.stripMiniMessage
 import kotlin.math.abs
+
+val spoken_popup: String by snippet("betterhud.spoken.popup", "")
 
 class BetterHudSpokenDialogueMessenger(
     player: Player,
@@ -59,7 +62,10 @@ class BetterHudSpokenDialogueMessenger(
             text = originalText
 
             typingDuration = entry.duration.get(player)
-            popupId = entry.popupId.get(player)
+            popupId = entry.popupId.get(player).ifBlank {
+                spoken_popup
+            }
+
 
             val api = BetterHudAPI.inst()
 

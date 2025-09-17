@@ -29,6 +29,7 @@ import java.time.Duration
 import java.util.logging.Logger
 import kotlin.math.min
 
+val option_popup: String by snippet("betterhud.option.popup", "")
 val option_sound: String by snippet("betterhud.option.sound", "block.lever.click")
 val option_sound_volume: Float by snippet("betterhud.option.volume", 1f)
 val option_sound_pitch: Float by snippet("betterhud.option.pitch", 2f)
@@ -102,7 +103,9 @@ class BetterHudOptionDialogueMessenger(
             rawText = stripMiniMessage(originalText)
 
             typeDuration = entry.duration.get(player)
-            popupId = entry.popupId.get(player)
+            popupId = entry.popupId.get(player).ifBlank {
+                option_popup
+            }
 
             val typingDuration = typingDurationType.totalDuration(rawText, typeDuration)
             val optionsShowingDuration = Duration.ofMillis(usableOptions.size * 100L)
