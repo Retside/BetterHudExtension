@@ -23,7 +23,7 @@ import com.typewritermc.engine.paper.entry.entries.SpeakerEntry
 import com.typewritermc.engine.paper.entry.entries.Var
 import com.typewritermc.engine.paper.utils.Sound
 import com.typewritermc.engine.paper.utils.playSound
-import me.newtale.betterhud.entries.dialogue.messanger.BetterHudOptionDialogueMessenger
+import me.newtale.betterhud.entries.dialogue.messenger.BetterHudOptionDialogueMessenger
 import net.kyori.adventure.sound.SoundStop
 import org.bukkit.entity.Player
 import java.time.Duration

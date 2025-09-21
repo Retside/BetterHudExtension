@@ -1,4 +1,4 @@
-package me.newtale.betterhud.entries.dialogue.messanger
+package me.newtale.betterhud.entries.dialogue.messenger
 
 import kr.toxicity.hud.api.BetterHudAPI
 import com.typewritermc.core.interaction.InteractionContext
