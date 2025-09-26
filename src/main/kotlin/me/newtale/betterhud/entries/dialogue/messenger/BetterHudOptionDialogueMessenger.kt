@@ -56,9 +56,12 @@ class BetterHudOptionDialogueMessenger(
     private var speakerDisplayName = ""
     private var parsedText = ""
     private var rawText = ""
-    private var playTime = Duration.ZERO
-    private var totalDuration = Duration.ZERO
+    private var playedTime = Duration.ZERO
+    private var typingDuration = Duration.ZERO
     private var completedAnimation = false
+
+    private var typingSound = false
+    private var interactionContext = context
 
     private var hudPlayer: HudPlayer? = null
     private var popup: kr.toxicity.hud.api.popup.Popup? = null
@@ -78,9 +81,9 @@ class BetterHudOptionDialogueMessenger(
         get() = entry.modifiers + (selected?.modifiers ?: emptyList())
 
     override var animationComplete: Boolean
-        get() = playTime >= totalDuration
+        get() = playedTime >= typingDuration
         set(value) {
-            playTime = if (!value) Duration.ZERO else totalDuration
+            playedTime = if (!value) Duration.ZERO else typingDuration
         }
 
     private fun createPressButtonText(): String {
@@ -107,9 +110,9 @@ class BetterHudOptionDialogueMessenger(
                 option_popup
             }
 
-            val typingDuration = typingDurationType.totalDuration(rawText, typeDuration)
+            val totalDuration = typingDurationType.totalDuration(rawText, typeDuration)
             val optionsShowingDuration = Duration.ofMillis(usableOptions.size * 100L)
-            totalDuration = typingDuration + optionsShowingDuration
+            typingDuration = totalDuration + optionsShowingDuration
 
             val api = BetterHudAPI.inst()
 
@@ -179,8 +182,8 @@ class BetterHudOptionDialogueMessenger(
     override fun tick(context: TickContext) {
         if (state != MessengerState.RUNNING) return
 
-        val isFirst = playTime == Duration.ZERO
-        playTime += context.deltaTime
+        val isFirst = playedTime == Duration.ZERO
+        playedTime += context.deltaTime
 
         var forceSend = false
 
@@ -198,7 +201,19 @@ class BetterHudOptionDialogueMessenger(
             return
         }
 
-        if (playTime.toTicks() % 2 > 0 && completedAnimation && !isFirst && !forceSend) {
+        val percentage = typingDurationType.calculatePercentage(playedTime, typingDuration, rawText)
+        val currentText = getCurrentText(percentage)
+
+        if (typingSound && playedTime < typingDuration) {
+            val previousLength = stripMiniMessage(currentText).length
+            val currentLength = getCurrentTextLength(percentage)
+
+            if (currentLength > previousLength) {
+                entry.playDialogueSound(player, interactionContext)
+            }
+        }
+
+        if (playedTime.toTicks() % 2 > 0 && completedAnimation && !isFirst && !forceSend) {
             return
         }
 
@@ -221,7 +236,7 @@ class BetterHudOptionDialogueMessenger(
     }
 
     private fun generateCurrentState(): String {
-        return "${playTime.toMillis()}_${selectedIndex}_${usableOptions.size}_${completedAnimation}"
+        return "${playedTime.toMillis()}_${selectedIndex}_${usableOptions.size}_${completedAnimation}"
     }
 
     private fun updatePopup() {
@@ -265,7 +280,7 @@ class BetterHudOptionDialogueMessenger(
         val typePercentage = if (typeDuration.isZero) {
             1.0
         } else {
-            typingDurationType.calculatePercentage(playTime, typeDuration, rawText)
+            typingDurationType.calculatePercentage(playedTime, typeDuration, rawText)
         }
 
         val currentText = getCurrentText(typePercentage)
@@ -392,7 +407,7 @@ class BetterHudOptionDialogueMessenger(
 
     private fun getOptionsInfo(): List<OptionInfo> {
         val typingDuration = typingDurationType.totalDuration(rawText, typeDuration)
-        val timeAfterTyping = playTime - typingDuration
+        val timeAfterTyping = playedTime - typingDuration
         val limitedOptions = (timeAfterTyping.toMillis() / 100).toInt().coerceAtLeast(0)
 
         val around = usableOptions.around(selectedIndex, 1, 2)

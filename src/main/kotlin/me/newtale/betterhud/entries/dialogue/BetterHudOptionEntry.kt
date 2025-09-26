@@ -53,6 +53,9 @@ class BetterHudOptionEntry(
     @Help("Sound to play when displaying the popup")
     val sound: Var<Sound> = ConstVar(Sound.EMPTY),
 
+    @Help("Play selected sound when typing text")
+    val typingSound: Var<Boolean> = ConstVar(false),
+
     @Help("The options to display")
     val options: List<Option> = emptyList(),
 

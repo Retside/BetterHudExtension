@@ -32,6 +32,9 @@ class BetterHudSpokenDialogueMessenger(
     private var typingDuration = Duration.ZERO
     private var playedTime = Duration.ZERO
 
+    private var typingSound = false
+    private var interactionContext = context;
+
     private var hudPlayer: HudPlayer? = null
     private var popup: kr.toxicity.hud.api.popup.Popup? = null
     private var popupUpdater: PopupUpdater? = null
@@ -62,6 +65,7 @@ class BetterHudSpokenDialogueMessenger(
             text = originalText
 
             typingDuration = entry.duration.get(player)
+            typingSound = entry.typingSound.get(player)
             popupId = entry.popupId.get(player).ifBlank {
                 spoken_popup
             }
@@ -127,6 +131,15 @@ class BetterHudSpokenDialogueMessenger(
 
         val percentage = typingDurationType.calculatePercentage(playedTime, typingDuration, rawText)
         val currentText = getCurrentText(percentage)
+
+        if (typingSound && playedTime < typingDuration) {
+            val previousLength = stripMiniMessage(lastDisplayedText).length
+            val currentLength = getCurrentTextLength(percentage)
+
+            if (currentLength > previousLength) {
+                entry.playDialogueSound(player, interactionContext)
+            }
+        }
 
         if (currentText != lastDisplayedText || abs(percentage - lastPercentage) > 0.01) {
             updatePopup(currentText, percentage)

@@ -46,11 +46,14 @@ class BetterHudSpokenEntry(
     @Help("Sound to play when opening the popup and stop when finish")
     val sound: Var<Sound> = ConstVar(Sound.EMPTY),
 
+    @Help("Play selected sound when typing text")
+    val typingSound: Var<Boolean> = ConstVar(false),
+
     @Help("Custom variables for popup")
     val customVariables: Map<String, Var<String>> = emptyMap(),
 
 
-) : DialogueEntry {
+    ) : DialogueEntry {
 
     override fun messenger(player: Player, context: InteractionContext): DialogueMessenger<BetterHudSpokenEntry> {
         return BetterHudSpokenDialogueMessenger(player, context, this)
