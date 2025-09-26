@@ -106,6 +106,7 @@ class BetterHudOptionDialogueMessenger(
             rawText = stripMiniMessage(originalText)
 
             typeDuration = entry.duration.get(player)
+            typingSound = entry.typingSound.get(player)
             popupId = entry.popupId.get(player).ifBlank {
                 option_popup
             }
