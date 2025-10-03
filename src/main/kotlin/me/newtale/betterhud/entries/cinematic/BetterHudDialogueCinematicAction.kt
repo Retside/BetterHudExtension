@@ -42,6 +42,12 @@ data class BetterHudDialogueSegment(
 
     @Help("Custom variables for this segment's popup")
     val customVariables: Map<String, Var<String>> = emptyMap(),
+
+    @Help("Sound to play when this segment starts and stop when it ends")
+    val sound: Var<Sound> = ConstVar(Sound.EMPTY),
+
+    @Help("Play sound when typing text in this segment")
+    val typingSound: Var<Boolean> = ConstVar(false),
 ) : Segment
 
 class BetterHudDialogueCinematicAction(
@@ -50,12 +56,11 @@ class BetterHudDialogueCinematicAction(
     private val segments: List<BetterHudDialogueSegment>,
     private val globalPopupId: Var<String>,
     private val globalCustomVariables: Map<String, Var<String>>,
-    private val splitPercentage: Double = 0.5,
-    private val sound: Var<Sound> = ConstVar(Sound.EMPTY),
-    private val typingSound: Var<Boolean> = ConstVar(false)
+    private val splitPercentage: Double = 0.5
 ) : CinematicAction {
 
     private var previousSegment: BetterHudDialogueSegment? = null
+    private var currentSegment: BetterHudDialogueSegment? = null
     private var state: PlayerState? = null
     private var displayText = ""
 
@@ -91,6 +96,7 @@ class BetterHudDialogueCinematicAction(
                 stopDialogueSound()
                 displayText = ""
                 previousSegment = null
+                currentSegment = null
                 resetPopupState()
                 lastVisibleChars = 0
             }
@@ -106,8 +112,8 @@ class BetterHudDialogueCinematicAction(
             player.exp = 1f
             player.playSpeakerSound(speaker)
 
-            // Відтворюємо основний звук діалогу
-            playDialogueSound()
+            currentSegment = segment
+            playDialogueSound(segment)
 
             previousSegment = segment
             displayText = segment.text.get(player).parsePlaceholders(player)
@@ -134,15 +140,15 @@ class BetterHudDialogueCinematicAction(
         val currentText = getCurrentText(displayText, finalPercentage)
         val rawText = stripMiniMessage(displayText)
 
-        // Відтворення звуку набору тексту
-        if (typingSound.get(player)) {
+        val shouldPlayTypingSound = segment.typingSound.get(player)
+        if (shouldPlayTypingSound) {
             val currentVisibleChars = getCurrentTextLength(rawText, finalPercentage)
 
             if (currentVisibleChars > lastVisibleChars) {
                 val newChar = rawText.getOrNull(lastVisibleChars)
 
                 if (newChar != null && !newChar.isWhitespace()) {
-                    playDialogueSound()
+                    playDialogueSound(segment)
                 }
             }
 
@@ -162,15 +168,16 @@ class BetterHudDialogueCinematicAction(
         }
     }
 
-    private fun playDialogueSound() {
-        val dialogueSound = sound.get(player)
+    private fun playDialogueSound(segment: BetterHudDialogueSegment) {
+        val dialogueSound = segment.sound.get(player)
         if (dialogueSound != Sound.EMPTY) {
             player.playSound(dialogueSound, null)
         }
     }
 
     private fun stopDialogueSound() {
-        val dialogueSound = sound.get(player)
+        val segment = currentSegment ?: return
+        val dialogueSound = segment.sound.get(player)
         if (dialogueSound != Sound.EMPTY) {
             val soundId = dialogueSound.soundId
             val soundStop = soundId.namespacedKey?.let { SoundStop.named(it) } ?: return

@@ -304,7 +304,6 @@ class BetterHudOptionDialogueMessenger(
         val nextOption = if (isComplete) getNextOption() else ""
 
         event.variables.apply {
-            // Основні змінні
             put("speaker", speakerDisplayName)
             put("text", currentText)
             put("show", "true")
