@@ -55,9 +55,8 @@ class BetterHudOptionDialogueMessenger(
     private var speakerDisplayName = ""
     private var parsedText = ""
     private var rawText = ""
-    private var playedTime = Duration.ZERO
-    private var typingDuration = Duration.ZERO
-    private var totalTypingDuration = Duration.ZERO
+    private var playTime = Duration.ZERO
+    private var totalDuration = Duration.ZERO
     private var completedAnimation = false
 
     private var typingSound = false
@@ -82,9 +81,9 @@ class BetterHudOptionDialogueMessenger(
         get() = entry.modifiers + (selected?.modifiers ?: emptyList())
 
     override var animationComplete: Boolean
-        get() = playedTime >= typingDuration
+        get() = playTime >= totalDuration
         set(value) {
-            playedTime = if (!value) Duration.ZERO else typingDuration
+            playTime = if (!value) Duration.ZERO else totalDuration
         }
 
     private fun createPressButtonText(): String {
@@ -112,9 +111,9 @@ class BetterHudOptionDialogueMessenger(
                 option_popup
             }
 
-            val totalDuration = typingDurationType.totalDuration(rawText, typeDuration)
+            val typingDuration = typingDurationType.totalDuration(rawText, typeDuration)
             val optionsShowingDuration = Duration.ofMillis(usableOptions.size * 100L)
-            totalTypingDuration = totalDuration + optionsShowingDuration
+            totalDuration = typingDuration + optionsShowingDuration
 
             val api = BetterHudAPI.inst()
 
@@ -142,8 +141,11 @@ class BetterHudOptionDialogueMessenger(
         val popupRef = popup ?: return
 
         try {
-            val percentage = typingDurationType.calculatePercentage(playedTime, typingDuration, rawText)
-            val currentText = getCurrentText(percentage)
+            val typePercentage =
+                if (typeDuration.isZero) {
+                    1.0
+                } else typingDurationType.calculatePercentage(playTime, typeDuration, rawText)
+            val currentText = getCurrentText(typePercentage)
 
             val event = createCustomPopupEvent()
             val updateEvent = BukkitEventUpdateEvent(event, "dialogue_${System.currentTimeMillis()}")
@@ -188,7 +190,7 @@ class BetterHudOptionDialogueMessenger(
     override fun tick(context: TickContext) {
         if (state != MessengerState.RUNNING) return
 
-        playedTime += context.deltaTime
+        playTime += context.deltaTime
 
         var forceSend = false
 
@@ -208,7 +210,7 @@ class BetterHudOptionDialogueMessenger(
         val typePercentage = if (typeDuration.isZero) {
             1.0
         } else {
-            typingDurationType.calculatePercentage(playedTime, typeDuration, rawText)
+            typingDurationType.calculatePercentage(playTime, typeDuration, rawText)
         }
 
         val currentText = getCurrentText(typePercentage)
@@ -247,7 +249,7 @@ class BetterHudOptionDialogueMessenger(
     }
 
     private fun generateCurrentState(): String {
-        return "${playedTime.toMillis()}_${selectedIndex}_${usableOptions.size}_${completedAnimation}"
+        return "${playTime.toMillis()}_${selectedIndex}_${usableOptions.size}_${completedAnimation}"
     }
 
     private fun updatePopup() {
@@ -291,7 +293,7 @@ class BetterHudOptionDialogueMessenger(
         val typePercentage = if (typeDuration.isZero) {
             1.0
         } else {
-            typingDurationType.calculatePercentage(playedTime, typeDuration, rawText)
+            typingDurationType.calculatePercentage(playTime, typeDuration, rawText)
         }
 
         val currentText = getCurrentText(typePercentage)
@@ -417,7 +419,7 @@ class BetterHudOptionDialogueMessenger(
 
     private fun getOptionsInfo(): List<OptionInfo> {
         val typingDuration = typingDurationType.totalDuration(rawText, typeDuration)
-        val timeAfterTyping = playedTime - typingDuration
+        val timeAfterTyping = playTime - typingDuration
         val limitedOptions = (timeAfterTyping.toMillis() / 100).toInt().coerceAtLeast(0)
 
         val around = usableOptions.around(selectedIndex, 1, 2)
