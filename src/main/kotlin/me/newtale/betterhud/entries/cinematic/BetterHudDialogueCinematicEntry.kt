@@ -9,13 +9,10 @@ import com.typewritermc.core.extension.annotations.Segments
 import com.typewritermc.engine.paper.entry.Criteria
 import com.typewritermc.engine.paper.entry.entries.*
 import com.typewritermc.engine.paper.snippets.snippet
+import com.typewritermc.engine.paper.utils.Sound
 import org.bukkit.entity.Player
 
 @Entry("betterhud_dialogue_cinematic", "Play a BetterHud dialogue cinematic", Colors.CYAN, "mdi:message-text")
-/**
- * The `BetterHud Dialogue Cinematic` displays animated dialogue using BetterHud popups.
- *
- */
 class BetterHudDialogueCinematicEntry(
     override val id: String = "",
     override val name: String = "",
@@ -28,6 +25,12 @@ class BetterHudDialogueCinematicEntry(
     @Help("Custom variables to pass to the popup")
     val customVariables: Map<String, Var<String>> = emptyMap(),
 
+    @Help("Sound to play when opening the popup and stop when finish")
+    val sound: Var<Sound> = ConstVar(Sound.EMPTY),
+
+    @Help("Play selected sound when typing text")
+    val typingSound: Var<Boolean> = ConstVar(false),
+
     @Segments(icon = "mdi:message-text")
     val segments: List<BetterHudDialogueSegment> = emptyList(),
 ) : CinematicEntry {
@@ -38,7 +41,9 @@ class BetterHudDialogueCinematicEntry(
             segments,
             popupId,
             customVariables,
-            betterHudPercentage
+            betterHudPercentage,
+            sound,
+            typingSound
         )
     }
 }

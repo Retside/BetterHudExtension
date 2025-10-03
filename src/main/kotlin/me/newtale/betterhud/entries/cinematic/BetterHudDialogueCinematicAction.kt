@@ -14,6 +14,8 @@ import com.typewritermc.engine.paper.utils.PlayerState
 import com.typewritermc.engine.paper.utils.Sync
 import com.typewritermc.engine.paper.utils.restore
 import com.typewritermc.engine.paper.utils.state
+import com.typewritermc.engine.paper.utils.Sound
+import com.typewritermc.engine.paper.utils.playSound
 import kr.toxicity.hud.api.BetterHudAPI
 import kr.toxicity.hud.api.bukkit.event.CustomPopupEvent
 import kr.toxicity.hud.api.bukkit.update.BukkitEventUpdateEvent
@@ -22,6 +24,7 @@ import kr.toxicity.hud.api.popup.PopupUpdater
 import kotlinx.coroutines.Dispatchers
 import me.newtale.betterhud.utils.reconstructMiniMessageText
 import me.newtale.betterhud.utils.stripMiniMessage
+import net.kyori.adventure.sound.SoundStop
 import org.bukkit.entity.Player
 import java.util.logging.Logger
 
@@ -47,7 +50,9 @@ class BetterHudDialogueCinematicAction(
     private val segments: List<BetterHudDialogueSegment>,
     private val globalPopupId: Var<String>,
     private val globalCustomVariables: Map<String, Var<String>>,
-    private val splitPercentage: Double = 0.5
+    private val splitPercentage: Double = 0.5,
+    private val sound: Var<Sound> = ConstVar(Sound.EMPTY),
+    private val typingSound: Var<Boolean> = ConstVar(false)
 ) : CinematicAction {
 
     private var previousSegment: BetterHudDialogueSegment? = null
@@ -66,6 +71,7 @@ class BetterHudDialogueCinematicAction(
     private var currentPopupId = ""
     private var lastDisplayedText = ""
     private var lastDisplayedPercentage = -1.0
+    private var lastVisibleChars = 0
 
     override suspend fun setup() {
         super.setup()
@@ -82,20 +88,27 @@ class BetterHudDialogueCinematicAction(
                 player.exp = 0f
                 player.level = 0
                 hideCurrentPopup()
+                stopDialogueSound()
                 displayText = ""
                 previousSegment = null
                 resetPopupState()
+                lastVisibleChars = 0
             }
             return
         }
 
         if (previousSegment != segment) {
             hideCurrentPopup()
+            stopDialogueSound()
             resetPopupState()
 
             player.level = 0
             player.exp = 1f
             player.playSpeakerSound(speaker)
+
+            // Відтворюємо основний звук діалогу
+            playDialogueSound()
+
             previousSegment = segment
             displayText = segment.text.get(player).parsePlaceholders(player)
 
@@ -103,6 +116,7 @@ class BetterHudDialogueCinematicAction(
 
             lastDisplayedText = ""
             lastDisplayedPercentage = -1.0
+            lastVisibleChars = 0
         }
 
         val percentage = segment percentageAt frame
@@ -118,6 +132,22 @@ class BetterHudDialogueCinematicAction(
 
         val finalPercentage = displayPercentage.coerceAtMost(1.0)
         val currentText = getCurrentText(displayText, finalPercentage)
+        val rawText = stripMiniMessage(displayText)
+
+        // Відтворення звуку набору тексту
+        if (typingSound.get(player)) {
+            val currentVisibleChars = getCurrentTextLength(rawText, finalPercentage)
+
+            if (currentVisibleChars > lastVisibleChars) {
+                val newChar = rawText.getOrNull(lastVisibleChars)
+
+                if (newChar != null && !newChar.isWhitespace()) {
+                    playDialogueSound()
+                }
+            }
+
+            lastVisibleChars = currentVisibleChars
+        }
 
         if (currentText != lastDisplayedText || Math.abs(finalPercentage - lastDisplayedPercentage) > 0.01) {
             displayBetterHudDialogue(
@@ -129,6 +159,22 @@ class BetterHudDialogueCinematicAction(
             )
             lastDisplayedText = currentText
             lastDisplayedPercentage = finalPercentage
+        }
+    }
+
+    private fun playDialogueSound() {
+        val dialogueSound = sound.get(player)
+        if (dialogueSound != Sound.EMPTY) {
+            player.playSound(dialogueSound, null)
+        }
+    }
+
+    private fun stopDialogueSound() {
+        val dialogueSound = sound.get(player)
+        if (dialogueSound != Sound.EMPTY) {
+            val soundId = dialogueSound.soundId
+            val soundStop = soundId.namespacedKey?.let { SoundStop.named(it) } ?: return
+            player.stopSound(soundStop)
         }
     }
 
@@ -302,6 +348,7 @@ class BetterHudDialogueCinematicAction(
     override suspend fun teardown() {
         super.teardown()
         hideCurrentPopup()
+        stopDialogueSound()
         resetPopupState()
         Dispatchers.Sync.switchContext {
             player.restore(state)
