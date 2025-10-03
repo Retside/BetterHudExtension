@@ -10,7 +10,6 @@ import com.typewritermc.engine.paper.entry.entries.EventTrigger
 import com.typewritermc.engine.paper.entry.matches
 import com.typewritermc.engine.paper.extensions.placeholderapi.parsePlaceholders
 import com.typewritermc.engine.paper.snippets.snippet
-import com.typewritermc.engine.paper.utils.*
 import kr.toxicity.hud.api.bukkit.event.CustomPopupEvent
 import kr.toxicity.hud.api.bukkit.update.BukkitEventUpdateEvent
 import kr.toxicity.hud.api.player.HudPlayer
@@ -58,6 +57,7 @@ class BetterHudOptionDialogueMessenger(
     private var rawText = ""
     private var playedTime = Duration.ZERO
     private var typingDuration = Duration.ZERO
+    private var totalTypingDuration = Duration.ZERO
     private var completedAnimation = false
 
     private var typingSound = false
@@ -67,6 +67,7 @@ class BetterHudOptionDialogueMessenger(
     private var popup: kr.toxicity.hud.api.popup.Popup? = null
     private var popupUpdater: PopupUpdater? = null
     private var lastDisplayedState = ""
+    private var lastDisplayedText = ""
     private var popupId = ""
     private var isPopupShown = false
 
@@ -113,7 +114,7 @@ class BetterHudOptionDialogueMessenger(
 
             val totalDuration = typingDurationType.totalDuration(rawText, typeDuration)
             val optionsShowingDuration = Duration.ofMillis(usableOptions.size * 100L)
-            typingDuration = totalDuration + optionsShowingDuration
+            totalTypingDuration = totalDuration + optionsShowingDuration
 
             val api = BetterHudAPI.inst()
 
@@ -141,12 +142,16 @@ class BetterHudOptionDialogueMessenger(
         val popupRef = popup ?: return
 
         try {
+            val percentage = typingDurationType.calculatePercentage(playedTime, typingDuration, rawText)
+            val currentText = getCurrentText(percentage)
+
             val event = createCustomPopupEvent()
             val updateEvent = BukkitEventUpdateEvent(event, "dialogue_${System.currentTimeMillis()}")
 
             popupUpdater = popupRef.show(updateEvent, hudPlayerRef)
             isPopupShown = popupUpdater != null
             lastUpdateEvent = event
+            lastDisplayedText = currentText
 
             if (!isPopupShown) {
                 logger.warning("Failed to show popup for ${player.name}")
@@ -183,7 +188,6 @@ class BetterHudOptionDialogueMessenger(
     override fun tick(context: TickContext) {
         if (state != MessengerState.RUNNING) return
 
-        val isFirst = playedTime == Duration.ZERO
         playedTime += context.deltaTime
 
         var forceSend = false
@@ -197,26 +201,32 @@ class BetterHudOptionDialogueMessenger(
         }
 
         if (usableOptions.isEmpty()) {
-            animationComplete = true
             state = MessengerState.FINISHED
             return
         }
 
-        val percentage = typingDurationType.calculatePercentage(playedTime, typingDuration, rawText)
-        val currentText = getCurrentText(percentage)
+        val typePercentage = if (typeDuration.isZero) {
+            1.0
+        } else {
+            typingDurationType.calculatePercentage(playedTime, typeDuration, rawText)
+        }
 
-        if (typingSound && playedTime < typingDuration) {
-            val previousLength = stripMiniMessage(currentText).length
-            val currentLength = getCurrentTextLength(percentage)
+        val currentText = getCurrentText(typePercentage)
 
-            if (currentLength > previousLength) {
-                entry.playDialogueSound(player, interactionContext)
+        if (typingSound) {
+            val previousLength = stripMiniMessage(lastDisplayedText).length
+            val currentLength = currentText.length
+
+            if (currentLength > previousLength && previousLength < rawText.length) {
+                val newChar = rawText.getOrNull(previousLength)
+
+                if (newChar != null && !newChar.isWhitespace()) {
+                    entry.playDialogueSound(player, interactionContext)
+                }
             }
         }
 
-        if (playedTime.toTicks() % 2 > 0 && completedAnimation && !isFirst && !forceSend) {
-            return
-        }
+        lastDisplayedText = currentText
 
         updatePopupWithCurrentState(forceSend)
     }
