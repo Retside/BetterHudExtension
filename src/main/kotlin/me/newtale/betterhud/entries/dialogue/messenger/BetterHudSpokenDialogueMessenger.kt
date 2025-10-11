@@ -63,7 +63,7 @@ class BetterHudSpokenDialogueMessenger(
             rawText = stripMiniMessage(originalText)
             text = originalText
 
-            typingDuration = entry.duration.get(player)
+            typingDuration = typingDurationType.totalDuration(rawText, entry.duration.get(player))
             typingSound = entry.typingSound.get(player)
             popupId = entry.popupId.get(player).ifBlank {
                 spoken_popup
@@ -98,7 +98,7 @@ class BetterHudSpokenDialogueMessenger(
         val popupRef = popup ?: return
 
         try {
-            val percentage = typingDurationType.calculatePercentage(playedTime, typingDuration, rawText)
+            val percentage = typingDurationType.calculatePercentage(playedTime, entry.duration.get(player), rawText)
             val currentText = getCurrentText(percentage)
 
             val event = createCustomPopupEvent(currentText, percentage)
@@ -128,7 +128,7 @@ class BetterHudSpokenDialogueMessenger(
             playedTime += context.deltaTime
         }
 
-        val percentage = typingDurationType.calculatePercentage(playedTime, typingDuration, rawText)
+        val percentage = typingDurationType.calculatePercentage(playedTime, entry.duration.get(player), rawText)
         val currentText = getCurrentText(percentage)
 
         if (typingSound) {
