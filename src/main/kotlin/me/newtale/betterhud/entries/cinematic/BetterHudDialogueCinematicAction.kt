@@ -267,7 +267,6 @@ class BetterHudDialogueCinematicAction(
 
         val event = lastUpdateEvent
         if (event != null) {
-            event.variables.clear()
             addDialogueVariables(event, text, displayPercentage, speakerName, segment)
         }
 
@@ -285,7 +284,6 @@ class BetterHudDialogueCinematicAction(
         segment: BetterHudDialogueSegment
     ): CustomPopupEvent {
         val event = CustomPopupEvent(player, currentPopupId)
-        event.variables.clear()
         addDialogueVariables(event, text, displayPercentage, speakerName, segment)
         return event
     }

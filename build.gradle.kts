@@ -1,6 +1,6 @@
 plugins {
     kotlin("jvm") version "2.2.10"
-    id("com.typewritermc.module-plugin") version "2.0.0"
+    id("com.typewritermc.module-plugin") version "2.1.0"
 }
 
 group = "me.newtale"
@@ -21,7 +21,7 @@ typewriter {
             |Created by Ney.
             |Discord: ney___
             """.trimMargin()
-        engineVersion = "0.9.0-beta-166"
+        engineVersion = "0.9.0-beta-167"
         channel = com.typewritermc.moduleplugin.ReleaseChannel.BETA
         dependencies {
             paper()
@@ -35,8 +35,8 @@ typewriter {
 
 repositories {
     mavenCentral()
-    maven { url = uri("https://repo.codemc.io/repository/maven-releases/") }
-    maven { url = uri("https://repo.codemc.io/repository/maven-snapshots/") }
+    //maven { url = uri("https://repo.codemc.io/repository/maven-releases/") }
+    //maven { url = uri("https://repo.codemc.io/repository/maven-snapshots/") }
 }
 
 dependencies {

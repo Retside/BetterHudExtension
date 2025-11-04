@@ -258,7 +258,6 @@ class BetterHudOptionDialogueMessenger(
         try {
             val event = lastUpdateEvent
             if (event != null) {
-                event.variables.clear()
                 addDialogueVariables(event)
             }
 
@@ -284,7 +283,6 @@ class BetterHudOptionDialogueMessenger(
 
     private fun createCustomPopupEvent(): CustomPopupEvent {
         val event = CustomPopupEvent(player, popupId)
-        event.variables.clear()
         addDialogueVariables(event)
         return event
     }

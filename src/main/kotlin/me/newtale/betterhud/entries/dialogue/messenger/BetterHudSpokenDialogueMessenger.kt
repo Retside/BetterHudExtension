@@ -156,7 +156,6 @@ class BetterHudSpokenDialogueMessenger(
         try {
             val event = lastUpdateEvent
             if (event != null) {
-                event.variables.clear()
                 addDialogueVariables(event, currentText, percentage)
             }
 
@@ -182,7 +181,6 @@ class BetterHudSpokenDialogueMessenger(
 
     private fun createCustomPopupEvent(currentText: String, percentage: Double): CustomPopupEvent {
         val event = CustomPopupEvent(player, popupId)
-        event.variables.clear()
         addDialogueVariables(event, currentText, percentage)
         return event
     }
