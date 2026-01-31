@@ -14,7 +14,7 @@ import com.typewritermc.engine.paper.facts.FactListenerSubscription
 import com.typewritermc.engine.paper.facts.FactUpdateContext
 import com.typewritermc.engine.paper.facts.listenForFacts
 import com.typewritermc.engine.paper.plugin
-import com.typewritermc.quest.QuestEntry
+import com.typewritermc.quest.entries.QuestEntry
 import com.typewritermc.quest.events.AsyncTrackedQuestUpdate
 import com.typewritermc.quest.trackedQuest
 import kr.toxicity.hud.api.BetterHudAPI
