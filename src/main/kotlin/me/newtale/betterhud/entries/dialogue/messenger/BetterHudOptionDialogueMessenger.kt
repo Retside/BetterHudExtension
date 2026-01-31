@@ -86,9 +86,9 @@ class BetterHudOptionDialogueMessenger(
             playTime = if (!value) Duration.ZERO else totalDuration
         }
 
-    private fun createPressButtonText(): String {
+    private fun confirmationKeyText(): String {
         val key = confirmationKey
-        return "Прокрутіть для вибору, <yellow>$key</yellow> для підтвердження"
+        return "$key".lowercase().lowercase().replace('_', ' ')
     }
 
     override fun init() {
@@ -312,7 +312,7 @@ class BetterHudOptionDialogueMessenger(
             put("instruction", if (canFinish) "finish" else "continue")
             put("is_complete", isComplete.toString())
 
-            put("pressbutton", if (isComplete && usableOptions.isNotEmpty()) createPressButtonText() else "")
+            put("confirmation_key", confirmationKeyText() )
 
             put("options_count", usableOptions.size.toString())
             put("selected_index", if (isComplete) selectedIndex.toString() else "-1")
@@ -344,7 +344,7 @@ class BetterHudOptionDialogueMessenger(
             put("typewriter_show", "true")
             put("typewriter_progress", (typePercentage * 100).toInt().toString())
             put("typewriter_instruction", if (canFinish) "finish" else "continue")
-            put("typewriter_pressbutton", if (isComplete && usableOptions.isNotEmpty()) createPressButtonText() else "")
+            put("typewriter_confirmation_key", confirmationKeyText())
             put("typewriter_options_count", usableOptions.size.toString())
             put("typewriter_selected_index", if (isComplete) selectedIndex.toString() else "-1")
             put("typewriter_selected_option", if (isComplete) (selected?.text?.get(player)?.parsePlaceholders(player) ?: "") else "")

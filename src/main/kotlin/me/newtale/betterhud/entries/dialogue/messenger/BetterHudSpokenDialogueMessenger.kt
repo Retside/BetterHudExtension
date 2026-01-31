@@ -185,6 +185,11 @@ class BetterHudSpokenDialogueMessenger(
         return event
     }
 
+    private fun confirmationKeyText(): String {
+        val key = confirmationKey
+        return "$key".lowercase().replace('_', ' ')
+    }
+
     private fun addDialogueVariables(event: CustomPopupEvent, currentText: String, percentage: Double) {
         val canFinish = eventTriggers.isEmpty()
         val isComplete = percentage >= 1.0
@@ -198,6 +203,8 @@ class BetterHudSpokenDialogueMessenger(
             put("instruction", if (canFinish) "finish" else "continue")
             put("is_complete", isComplete.toString())
 
+            put("confirmation_key", confirmationKeyText())
+
             put("raw_text", rawText)
             put("total_chars", rawText.length.toString())
             put("visible_chars", getCurrentTextLength(percentage).toString())
@@ -207,6 +214,7 @@ class BetterHudSpokenDialogueMessenger(
             put("typewriter_show", "true")
             put("typewriter_progress", (percentage * 100).toInt().toString())
             put("typewriter_instruction", if (canFinish) "finish" else "continue")
+            put("confirmation_key", confirmationKeyText())
         }
 
         entry.customVariables.forEach { (key, value) ->
