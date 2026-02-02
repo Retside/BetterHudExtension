@@ -366,7 +366,7 @@ class BetterHudOptionDialogueMessenger(
         val prevIndex = getPreviousIndex()
         return if (prevIndex != -1 && prevIndex < usableOptions.size) {
             val optionText = usableOptions[prevIndex].text.get(player).parsePlaceholders(player)
-            return optionText
+            optionText
         } else {
             "-----"
         }
@@ -376,7 +376,7 @@ class BetterHudOptionDialogueMessenger(
         val nextIndex = getNextIndex()
         return if (nextIndex != -1 && nextIndex < usableOptions.size) {
             val optionText = usableOptions[nextIndex].text.get(player).parsePlaceholders(player)
-            return optionText
+            optionText
         } else {
             "-----"
         }

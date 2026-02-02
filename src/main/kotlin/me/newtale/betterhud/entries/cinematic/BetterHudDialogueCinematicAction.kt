@@ -27,6 +27,7 @@ import me.newtale.betterhud.utils.stripMiniMessage
 import net.kyori.adventure.sound.SoundStop
 import org.bukkit.entity.Player
 import java.util.logging.Logger
+import kotlin.math.abs
 
 data class BetterHudDialogueSegment(
     override val startFrame: Int = 0,
@@ -155,7 +156,7 @@ class BetterHudDialogueCinematicAction(
             lastVisibleChars = currentVisibleChars
         }
 
-        if (currentText != lastDisplayedText || Math.abs(finalPercentage - lastDisplayedPercentage) > 0.01) {
+        if (currentText != lastDisplayedText || abs(finalPercentage - lastDisplayedPercentage) > 0.01) {
             displayBetterHudDialogue(
                 player,
                 speakerDisplayName,
@@ -188,9 +189,7 @@ class BetterHudDialogueCinematicAction(
     private fun setupSegmentPopup(segment: BetterHudDialogueSegment) {
         try {
             val segmentPopupId = segment.popupId.get(player)
-            currentPopupId = if (segmentPopupId.isNotBlank()) {
-                segmentPopupId
-            } else {
+            currentPopupId = segmentPopupId.ifBlank {
                 globalPopupId.get(player)
             }
 

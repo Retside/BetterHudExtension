@@ -32,7 +32,7 @@ class BetterHudSpokenDialogueMessenger(
     private var playedTime = Duration.ZERO
 
     private var typingSound = false
-    private var interactionContext = context;
+    private var interactionContext = context
 
     private var hudPlayer: HudPlayer? = null
     private var popup: kr.toxicity.hud.api.popup.Popup? = null
