@@ -26,10 +26,13 @@ class BetterHudAddCompassPointActionEntry(
     override val triggers: List<Ref<TriggerableEntry>> = emptyList(),
     override val criteria: List<Criteria> = emptyList(),
     override val modifiers: List<Modifier> = emptyList(),
+
     @Help("Point name")
     val pointName: String = "",
+
     @Help("Icon name")
     val icon: String = "",
+
     @Help("Coordinates of the point")
     val pointLocation: Var<Position> = ConstVar(Position.ORIGIN)
 

@@ -7,8 +7,8 @@ fun reconstructMiniMessageText(originalText: String, visibleChars: Int): String 
     if (visibleChars <= 0) return ""
 
     var currentChars = 0
-    var result = StringBuilder()
-    var tagStack = mutableListOf<String>()
+    val result = StringBuilder()
+    val tagStack = mutableListOf<String>()
     var i = 0
 
     while (i < originalText.length && currentChars < visibleChars) {
@@ -17,6 +17,12 @@ fun reconstructMiniMessageText(originalText: String, visibleChars: Int): String 
                 val tagEnd = originalText.indexOf('>', i)
                 if (tagEnd != -1) {
                     val tagContent = originalText.substring(i + 1, tagEnd)
+
+                    if (tagContent.startsWith("d:")) {
+                        i = tagEnd + 1
+                        continue
+                    }
+
                     val tag = "<$tagContent>"
 
                     result.append(tag)
@@ -57,10 +63,13 @@ fun isInstantTag(tagContent: String): Boolean {
 }
 
 fun stripMiniMessage(text: String): String {
+    val cleanText = text.replace("<d:[^>]*>".toRegex(), "")
     return try {
-        val component = miniMessage().deserialize(text)
-        LegacyComponentSerializer.legacySection().serialize(component).replace("§[0-9a-fk-or]".toRegex(), "")
+        val component = miniMessage().deserialize(cleanText)
+        LegacyComponentSerializer.legacySection()
+                .serialize(component)
+                .replace("§[0-9a-fk-or]".toRegex(), "")
     } catch (e: Exception) {
-        text.replace("<[^>]*>".toRegex(), "")
+        cleanText.replace("<[^>]*>".toRegex(), "")
     }
 }

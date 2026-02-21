@@ -12,10 +12,6 @@ import com.typewritermc.engine.paper.snippets.snippet
 import org.bukkit.entity.Player
 
 @Entry("betterhud_dialogue_cinematic", "Play a BetterHud dialogue cinematic", Colors.CYAN, "mdi:message-text")
-/**
- * The `BetterHud Dialogue Cinematic` displays animated dialogue using BetterHud popups.
- *
- */
 class BetterHudDialogueCinematicEntry(
     override val id: String = "",
     override val name: String = "",

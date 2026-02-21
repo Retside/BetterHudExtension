@@ -1,6 +1,5 @@
 package me.newtale.betterhud.entries.dialogue.messenger
 
-import kr.toxicity.hud.api.BetterHudAPI
 import com.typewritermc.core.interaction.InteractionContext
 import com.typewritermc.core.utils.around
 import com.typewritermc.core.utils.loopingDistance
@@ -10,13 +9,17 @@ import com.typewritermc.engine.paper.entry.entries.EventTrigger
 import com.typewritermc.engine.paper.entry.matches
 import com.typewritermc.engine.paper.extensions.placeholderapi.parsePlaceholders
 import com.typewritermc.engine.paper.snippets.snippet
+import kr.toxicity.hud.api.BetterHudAPI
 import kr.toxicity.hud.api.bukkit.event.CustomPopupEvent
 import kr.toxicity.hud.api.bukkit.update.BukkitEventUpdateEvent
 import kr.toxicity.hud.api.player.HudPlayer
+import kr.toxicity.hud.api.popup.Popup
 import kr.toxicity.hud.api.popup.PopupUpdater
 import me.newtale.betterhud.entries.dialogue.BetterHudOptionEntry
 import me.newtale.betterhud.entries.dialogue.Option
 import me.newtale.betterhud.entries.dialogue.OptionContextKeys
+import me.newtale.betterhud.utils.DelayedText
+import me.newtale.betterhud.utils.parseDelays
 import me.newtale.betterhud.utils.reconstructMiniMessageText
 import me.newtale.betterhud.utils.stripMiniMessage
 import net.kyori.adventure.key.Key
@@ -49,12 +52,14 @@ class BetterHudOptionDialogueMessenger(
             this.context[entry, OptionContextKeys.SELECTED_OPTION] = value + 1
         }
 
-    private val selected get() = usableOptions.getOrNull(selectedIndex)
+    private val selected
+        get() = usableOptions.getOrNull(selectedIndex)
 
     private var usableOptions: List<Option> = emptyList()
     private var speakerDisplayName = ""
     private var parsedText = ""
     private var rawText = ""
+    private var delayedText: DelayedText? = null
     private var playTime = Duration.ZERO
     private var totalDuration = Duration.ZERO
     private var completedAnimation = false
@@ -63,7 +68,7 @@ class BetterHudOptionDialogueMessenger(
     private var interactionContext = context
 
     private var hudPlayer: HudPlayer? = null
-    private var popup: kr.toxicity.hud.api.popup.Popup? = null
+    private var popup: Popup? = null
     private var popupUpdater: PopupUpdater? = null
     private var lastDisplayedState = ""
     private var lastDisplayedText = ""
@@ -102,16 +107,17 @@ class BetterHudOptionDialogueMessenger(
             speakerDisplayName = speaker?.displayName?.get(player)?.parsePlaceholders(player) ?: "Unknown"
 
             val originalText = entry.text.get(player).parsePlaceholders(player)
-            parsedText = originalText
-            rawText = stripMiniMessage(originalText)
+            val parsed = parseDelays(originalText)
+            delayedText = parsed
+
+            parsedText = parsed.textWithoutDelays
+            rawText = parsed.rawTextWithoutDelays
 
             typeDuration = entry.duration.get(player)
             typingSound = entry.typingSound.get(player)
-            popupId = entry.popupId.get(player).ifBlank {
-                option_popup
-            }
+            popupId = entry.popupId.get(player).ifBlank { option_popup }
 
-            val typingDuration = typingDurationType.totalDuration(rawText, typeDuration)
+            val typingDuration = parsed.getTotalDuration(typeDuration)
             val optionsShowingDuration = Duration.ofMillis(usableOptions.size * 100L)
             totalDuration = typingDuration + optionsShowingDuration
 
@@ -128,7 +134,6 @@ class BetterHudOptionDialogueMessenger(
             entry.playDialogueSound(player, context)
 
             showPopupInitially()
-
         } catch (e: Exception) {
             logger.warning("BetterHud initialization error for ${player.name}: ${e.message}")
             player.sendMessage("§cDialog initialization error: ${e.message}")
@@ -141,10 +146,9 @@ class BetterHudOptionDialogueMessenger(
         val popupRef = popup ?: return
 
         try {
-            val typePercentage =
-                if (typeDuration.isZero) {
-                    1.0
-                } else typingDurationType.calculatePercentage(playTime, typeDuration, rawText)
+            val typePercentage = if (typeDuration.isZero) {
+                1.0
+            } else delayedText?.calculatePercentage(playTime, typeDuration) ?: 1.0
             val currentText = getCurrentText(typePercentage)
 
             val event = createCustomPopupEvent()
@@ -158,7 +162,6 @@ class BetterHudOptionDialogueMessenger(
             if (!isPopupShown) {
                 logger.warning("Failed to show popup for ${player.name}")
             }
-
         } catch (e: Exception) {
             logger.warning("Failed to show popup initially for ${player.name}: ${e.message}")
             isPopupShown = false
@@ -182,7 +185,14 @@ class BetterHudOptionDialogueMessenger(
 
         selectedIndex = newIndex
 
-        player.playSound(Sound.sound(Key.key(option_sound), Sound.Source.MASTER, option_sound_volume, option_sound_pitch))
+        player.playSound(
+            Sound.sound(
+                Key.key(option_sound),
+                Sound.Source.MASTER,
+                option_sound_volume,
+                option_sound_pitch
+            )
+        )
 
         forceUpdatePopup()
     }
@@ -207,11 +217,12 @@ class BetterHudOptionDialogueMessenger(
             return
         }
 
-        val typePercentage = if (typeDuration.isZero) {
-            1.0
-        } else {
-            typingDurationType.calculatePercentage(playTime, typeDuration, rawText)
-        }
+        val typePercentage =
+            if (typeDuration.isZero) {
+                1.0
+            } else {
+                typingDurationType.calculatePercentage(playTime, typeDuration, rawText)
+            }
 
         val currentText = getCurrentText(typePercentage)
 
@@ -273,9 +284,7 @@ class BetterHudOptionDialogueMessenger(
     }
 
     private fun hidePopup() {
-        hudPlayer?.let { player ->
-            popup?.hide(player)
-        }
+        hudPlayer?.let { player -> popup?.hide(player) }
         popupUpdater = null
         isPopupShown = false
         lastUpdateEvent = null
@@ -291,7 +300,7 @@ class BetterHudOptionDialogueMessenger(
         val typePercentage = if (typeDuration.isZero) {
             1.0
         } else {
-            typingDurationType.calculatePercentage(playTime, typeDuration, rawText)
+            delayedText?.calculatePercentage(playTime, typeDuration) ?: 1.0
         }
 
         val currentText = getCurrentText(typePercentage)
@@ -312,7 +321,7 @@ class BetterHudOptionDialogueMessenger(
             put("instruction", if (canFinish) "finish" else "continue")
             put("is_complete", isComplete.toString())
 
-            put("confirmation_key", confirmationKeyText() )
+            put("confirmation_key", confirmationKeyText())
 
             put("options_count", usableOptions.size.toString())
             put("selected_index", if (isComplete) selectedIndex.toString() else "-1")
@@ -416,7 +425,7 @@ class BetterHudOptionDialogueMessenger(
     )
 
     private fun getOptionsInfo(): List<OptionInfo> {
-        val typingDuration = typingDurationType.totalDuration(rawText, typeDuration)
+        val typingDuration = delayedText?.getTotalDuration(typeDuration) ?: typeDuration
         val timeAfterTyping = playTime - typingDuration
         val limitedOptions = (timeAfterTyping.toMillis() / 100).toInt().coerceAtLeast(0)
 
@@ -433,12 +442,16 @@ class BetterHudOptionDialogueMessenger(
             val isVisible = i < showingOptions
             val isSelected = selected == option
 
-            val prefix = when {
-                isSelected -> ">>>"
-                i == 0 && selectedIndex > 1 && usableOptions.size > 4 -> "↑"
-                i == 3 && selectedIndex < usableOptions.size - 3 && usableOptions.size > 4 -> "↓"
-                else -> ""
-            }
+            val prefix =
+                when {
+                    isSelected -> ">>>"
+                    i == 0 && selectedIndex > 1 && usableOptions.size > 4 -> "↑"
+                    i == 3 &&
+                            selectedIndex < usableOptions.size - 3 &&
+                            usableOptions.size > 4 -> "↓"
+
+                    else -> ""
+                }
 
             optionsInfo.add(
                 OptionInfo(

@@ -29,23 +29,22 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 @Entry("hud_compass_point_audience", "Show BetterHud compass point for players with specific quest.", Colors.CYAN, "material-symbols:touch-app-rounded")
-/**
- * The `BetterHudCompassPointAudienceEntry` shows a compass point in BetterHUD for players with specific quest.
- *
- * ## How could this be used?
- * This could be used to show quest waypoints, objectives, or important locations to players who have specific quests.
- */
 class BetterHudCompassPointAudience(
     override val id: String = "",
     override val name: String = "",
+
     @Help("Quest that the player should have")
     val quest: Ref<QuestEntry> = emptyRef(),
+
     @Help("Point name")
     val pointName: Var<String> = ConstVar(""),
+
     @Help("Icon name")
     val icon: Var<String> = ConstVar(""),
+
     @Help("Coordinates of the point")
     val pointLocation: Var<Position> = ConstVar(Position.ORIGIN),
+
     @Help("Criteria for displaying a compass point")
     val criteria: List<Criteria> = emptyList(),
 ) : AudienceEntry {
