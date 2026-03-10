@@ -1,5 +1,6 @@
 package me.newtale.betterhud.utils
 
+import com.typewritermc.engine.paper.entry.dialogue.TypingDurationType
 import java.time.Duration
 
 data class TextDelay(val position: Int, val duration: Duration)
@@ -11,22 +12,27 @@ data class DelayedText(
         val delays: List<TextDelay>
 ) {
 
-    fun getTotalDuration(baseDuration: Duration): Duration {
-        var total = baseDuration
+    fun getTotalDuration(type: TypingDurationType, baseDuration: Duration): Duration {
+        var total = type.totalDuration(rawTextWithoutDelays, baseDuration)
         for (delay in delays) {
             total = total.plus(delay.duration)
         }
         return total
     }
 
-    fun calculatePercentage(playedTime: Duration, baseDuration: Duration): Double {
-        val totalDuration = getTotalDuration(baseDuration)
+    fun calculatePercentage(
+            type: TypingDurationType,
+            playedTime: Duration,
+            baseDuration: Duration
+    ): Double {
+        val totalDuration = getTotalDuration(type, baseDuration)
         if (totalDuration.isZero) return 1.0
 
         val rawLength = rawTextWithoutDelays.length
         if (rawLength == 0) return 1.0
 
-        val msPerChar = baseDuration.toMillis().toDouble() / rawLength
+        val totalBaseDuration = type.totalDuration(rawTextWithoutDelays, baseDuration)
+        val msPerChar = totalBaseDuration.toMillis().toDouble() / rawLength
 
         var currentTime = Duration.ZERO
         var visibleChars = 0

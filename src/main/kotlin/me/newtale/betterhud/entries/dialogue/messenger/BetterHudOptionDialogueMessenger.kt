@@ -117,7 +117,7 @@ class BetterHudOptionDialogueMessenger(
             typingSound = entry.typingSound.get(player)
             popupId = entry.popupId.get(player).ifBlank { option_popup }
 
-            val typingDuration = parsed.getTotalDuration(typeDuration)
+            val typingDuration = parsed.getTotalDuration(typingDurationType, typeDuration)
             val optionsShowingDuration = Duration.ofMillis(usableOptions.size * 100L)
             totalDuration = typingDuration + optionsShowingDuration
 
@@ -146,9 +146,12 @@ class BetterHudOptionDialogueMessenger(
         val popupRef = popup ?: return
 
         try {
-            val typePercentage = if (typeDuration.isZero) {
-                1.0
-            } else delayedText?.calculatePercentage(playTime, typeDuration) ?: 1.0
+            val typePercentage =
+                if (typeDuration.isZero) 1.0
+                else {
+                    delayedText?.calculatePercentage(typingDurationType, playTime, typeDuration)
+                        ?: typingDurationType.calculatePercentage(playTime, typeDuration, rawText)
+                }
             val currentText = getCurrentText(typePercentage)
 
             val event = createCustomPopupEvent()
@@ -218,10 +221,10 @@ class BetterHudOptionDialogueMessenger(
         }
 
         val typePercentage =
-            if (typeDuration.isZero) {
-                1.0
-            } else {
-                typingDurationType.calculatePercentage(playTime, typeDuration, rawText)
+            if (typeDuration.isZero) 1.0
+            else {
+                delayedText?.calculatePercentage(typingDurationType, playTime, typeDuration)
+                    ?: typingDurationType.calculatePercentage(playTime, typeDuration, rawText)
             }
 
         val currentText = getCurrentText(typePercentage)
@@ -277,7 +280,6 @@ class BetterHudOptionDialogueMessenger(
             if (!success) {
                 logger.info("Popup update failed for ${player.name}")
             }
-
         } catch (e: Exception) {
             logger.warning("Popup update error for ${player.name}: ${e.message}")
         }
@@ -300,7 +302,7 @@ class BetterHudOptionDialogueMessenger(
         val typePercentage = if (typeDuration.isZero) {
             1.0
         } else {
-            delayedText?.calculatePercentage(playTime, typeDuration) ?: 1.0
+            delayedText?.calculatePercentage(typingDurationType, playTime, typeDuration) ?: 1.0
         }
 
         val currentText = getCurrentText(typePercentage)
@@ -325,7 +327,10 @@ class BetterHudOptionDialogueMessenger(
 
             put("options_count", usableOptions.size.toString())
             put("selected_index", if (isComplete) selectedIndex.toString() else "-1")
-            put("selected_option", if (isComplete) (selected?.text?.get(player)?.parsePlaceholders(player) ?: "") else "")
+            put(
+                "selected_option",
+                if (isComplete) (selected?.text?.get(player)?.parsePlaceholders(player) ?: "") else ""
+            )
             put("has_options", usableOptions.isNotEmpty().toString())
             put("animation_complete", completedAnimation.toString())
 
@@ -356,11 +361,18 @@ class BetterHudOptionDialogueMessenger(
             put("typewriter_confirmation_key", confirmationKeyText())
             put("typewriter_options_count", usableOptions.size.toString())
             put("typewriter_selected_index", if (isComplete) selectedIndex.toString() else "-1")
-            put("typewriter_selected_option", if (isComplete) (selected?.text?.get(player)?.parsePlaceholders(player) ?: "") else "")
+            put(
+                "typewriter_selected_option",
+                if (isComplete) (selected?.text?.get(player)?.parsePlaceholders(player) ?: "")
+                else ""
+            )
 
             put("typewriter_previous_option", previousOption)
             put("typewriter_next_option", nextOption)
-            put("typewriter_has_previous", (isComplete && getPreviousIndex() != -1 && usableOptions.size > 1).toString())
+            put(
+                "typewriter_has_previous",
+                (isComplete && getPreviousIndex() != -1 && usableOptions.size > 1).toString()
+            )
             put("typewriter_has_next", (isComplete && getNextIndex() != -1 && usableOptions.size > 1).toString())
         }
 
@@ -425,7 +437,8 @@ class BetterHudOptionDialogueMessenger(
     )
 
     private fun getOptionsInfo(): List<OptionInfo> {
-        val typingDuration = delayedText?.getTotalDuration(typeDuration) ?: typeDuration
+        val typingDuration =
+            delayedText?.getTotalDuration(typingDurationType, typeDuration) ?: typeDuration
         val timeAfterTyping = playTime - typingDuration
         val limitedOptions = (timeAfterTyping.toMillis() / 100).toInt().coerceAtLeast(0)
 

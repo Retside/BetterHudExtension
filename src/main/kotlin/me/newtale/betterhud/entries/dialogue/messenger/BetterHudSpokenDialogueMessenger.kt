@@ -22,9 +22,9 @@ import java.util.logging.Logger
 val spoken_popup: String by snippet("betterhud.spoken.popup", "")
 
 class BetterHudSpokenDialogueMessenger(
-    player: Player,
-    context: InteractionContext,
-    entry: BetterHudSpokenEntry
+        player: Player,
+        context: InteractionContext,
+        entry: BetterHudSpokenEntry
 ) : DialogueMessenger<BetterHudSpokenEntry>(player, context, entry) {
 
     private var confirmationKeyHandler: ConfirmationKeyHandler? = null
@@ -62,7 +62,7 @@ class BetterHudSpokenDialogueMessenger(
         try {
             val speaker = entry.speaker.get()
             speakerDisplayName =
-                speaker?.displayName?.get(player)?.parsePlaceholders(player) ?: "Unknown"
+                    speaker?.displayName?.get(player)?.parsePlaceholders(player) ?: "Unknown"
 
             val originalText = entry.text.get(player).parsePlaceholders(player)
             val parsed = parseDelays(originalText)
@@ -72,7 +72,7 @@ class BetterHudSpokenDialogueMessenger(
             text = parsed.textWithoutDelays
 
             val baseDuration = entry.duration.get(player)
-            typingDuration = parsed.getTotalDuration(baseDuration)
+            typingDuration = parsed.getTotalDuration(typingDurationType, baseDuration)
 
             typingSound = entry.typingSound.get(player)
             popupId = entry.popupId.get(player).ifBlank { spoken_popup }
@@ -80,10 +80,10 @@ class BetterHudSpokenDialogueMessenger(
             val api = BetterHudAPI.inst()
 
             hudPlayer = api.playerManager.getHudPlayer(player.uniqueId)
-                ?: throw IllegalStateException("HudPlayer not found")
+                            ?: throw IllegalStateException("HudPlayer not found")
 
             popup = api.popupManager.getPopup(popupId)
-                ?: throw IllegalStateException("Popup '$popupId' not found")
+                            ?: throw IllegalStateException("Popup '$popupId' not found")
 
             confirmationKeyHandler = confirmationKey.handler(player) { completeOrFinish() }
 
@@ -103,12 +103,16 @@ class BetterHudSpokenDialogueMessenger(
 
         try {
             val baseDuration = entry.duration.get(player)
-            val percentage = delayedText?.calculatePercentage(playedTime, baseDuration) ?: 1.0
+            val percentage =
+                    if (baseDuration.isZero) 1.0
+                    else {
+                        delayedText?.calculatePercentage(typingDurationType, playedTime, baseDuration)
+                                ?: typingDurationType.calculatePercentage(playedTime, baseDuration, rawText)
+                    }
             val currentText = getCurrentText(percentage)
 
             val event = createCustomPopupEvent(currentText, percentage)
-            val updateEvent =
-                BukkitEventUpdateEvent(event, "dialogue_${System.currentTimeMillis()}")
+            val updateEvent = BukkitEventUpdateEvent(event, "dialogue_${System.currentTimeMillis()}")
 
             popupUpdater = popupRef.show(updateEvent, hudPlayerRef)
             isPopupShown = popupUpdater != null
@@ -134,7 +138,12 @@ class BetterHudSpokenDialogueMessenger(
         }
 
         val baseDuration = entry.duration.get(player)
-        val percentage = delayedText?.calculatePercentage(playedTime, baseDuration) ?: 1.0
+        val percentage =
+                if (baseDuration.isZero) 1.0
+                else {
+                    delayedText?.calculatePercentage(typingDurationType, playedTime, baseDuration)
+                            ?: typingDurationType.calculatePercentage(playedTime, baseDuration, rawText)
+                }
         val currentText = getCurrentText(percentage)
 
         if (typingSound) {
@@ -193,9 +202,9 @@ class BetterHudSpokenDialogueMessenger(
     }
 
     private fun addDialogueVariables(
-        event: CustomPopupEvent,
-        currentText: String,
-        percentage: Double
+            event: CustomPopupEvent,
+            currentText: String,
+            percentage: Double
     ) {
         val canFinish = eventTriggers.isEmpty()
         val isComplete = percentage >= 1.0
