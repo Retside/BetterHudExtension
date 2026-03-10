@@ -11,7 +11,7 @@ typewriter {
 
     extension {
         name = "BetterHud"
-        shortDescription = "Extension for pointers and popups"
+        shortDescription = "Extension that adds support for BetterHud"
         description = """
             |BetterHudExtension for Typewriter that adds support
             |for BetterHud's pointer and popup systems to Typewriter,
@@ -35,15 +35,12 @@ typewriter {
 
 repositories {
     mavenCentral()
-    //maven { url = uri("https://repo.codemc.io/repository/maven-releases/") }
-    //maven { url = uri("https://repo.codemc.io/repository/maven-snapshots/") }
 }
 
 dependencies {
     compileOnly("io.github.toxicity188:BetterHud-standard-api:1.12.2")
     compileOnly("io.github.toxicity188:BetterHud-bukkit-api:1.12.2")
     compileOnly("io.github.toxicity188:BetterCommand:1.4.3")
-    //compileOnly("com.github.retrooper:packetevents-spigot:2.8.0")
     implementation("com.typewritermc:QuestExtension:0.9.0")
     implementation("com.typewritermc:BasicExtension:0.9.0")
 }
