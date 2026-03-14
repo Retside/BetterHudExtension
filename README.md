@@ -14,7 +14,7 @@ A Typewriter extension that integrates BetterHud's popup and pointer systems, en
 ## Requirements
 
 - [Paper](https://papermc.io/)
-- [Typewriter](https://github.com/typewritermc/typewriter)
+- [Typewriter](https://github.com/gabber235/Typewriter)
 - [BetterHud](https://github.com/toxicity188/BetterHud)
 - Java 21
 
