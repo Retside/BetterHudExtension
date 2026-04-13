@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "me.newtale"
-version = "0.9.0-beta-171"
+version = "0.9.0-beta-172"
 
 typewriter {
     namespace = "newtale"
@@ -21,7 +21,7 @@ typewriter {
             |Created by Ney.
             |Discord: ney___
             """.trimMargin()
-        engineVersion = "0.9.0-beta-171"
+        engineVersion = "0.9.0-beta-172"
         channel = com.typewritermc.moduleplugin.ReleaseChannel.BETA
         dependencies {
             paper()
@@ -38,8 +38,8 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.github.toxicity188:BetterHud-standard-api:1.12.2")
-    compileOnly("io.github.toxicity188:BetterHud-bukkit-api:1.12.2")
+    compileOnly("io.github.toxicity188:BetterHud-standard-api:1.14.1")
+    compileOnly("io.github.toxicity188:BetterHud-bukkit-api:1.14.1")
     compileOnly("io.github.toxicity188:BetterCommand:1.4.3")
     implementation("com.typewritermc:QuestExtension:0.9.0")
     implementation("com.typewritermc:BasicExtension:0.9.0")
