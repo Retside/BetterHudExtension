@@ -1,5 +1,7 @@
 package me.newtale.betterhud.entries.dialogue
 
+import com.typewritermc.basic.entries.dialogue.Option as BasicOption
+import com.typewritermc.basic.entries.dialogue.OptionDialogueEntry as BasicOptionDialogueEntry
 import com.typewritermc.core.books.pages.Colors
 import com.typewritermc.core.entries.Ref
 import com.typewritermc.core.entries.emptyRef
@@ -21,8 +23,10 @@ import com.typewritermc.engine.paper.entry.entries.EntryTrigger
 import com.typewritermc.engine.paper.entry.entries.EventTrigger
 import com.typewritermc.engine.paper.entry.entries.SpeakerEntry
 import com.typewritermc.engine.paper.entry.entries.Var
+import com.typewritermc.engine.paper.utils.isFloodgate
 import com.typewritermc.engine.paper.utils.Sound
 import com.typewritermc.engine.paper.utils.playSound
+import com.typewritermc.basic.entries.dialogue.messengers.option.BedrockOptionDialogueDialogueMessenger
 import me.newtale.betterhud.entries.dialogue.messenger.BetterHudOptionDialogueMessenger
 import net.kyori.adventure.sound.SoundStop
 import org.bukkit.entity.Player
@@ -65,7 +69,29 @@ class BetterHudOptionEntry(
     ) : DialogueEntry {
 
     override fun messenger(player: Player, context: InteractionContext): DialogueMessenger<BetterHudOptionEntry> {
-        return BetterHudOptionDialogueMessenger(player, context, this)
+        if (!player.isFloodgate) return BetterHudOptionDialogueMessenger(player, context, this)
+
+        val bedrockEntry = BasicOptionDialogueEntry(
+            id = id,
+            name = name,
+            criteria = criteria,
+            modifiers = modifiers,
+            triggers = triggers,
+            speaker = speaker,
+            text = text,
+            options = options.map {
+                BasicOption(
+                    text = it.text,
+                    criteria = it.criteria,
+                    modifiers = it.modifiers,
+                    triggers = it.triggers,
+                )
+            },
+            duration = duration,
+        )
+
+        @Suppress("UNCHECKED_CAST")
+        return BedrockOptionDialogueDialogueMessenger(player, context, bedrockEntry) as DialogueMessenger<BetterHudOptionEntry>
     }
 
     fun playDialogueSound(player: Player, context: InteractionContext) {

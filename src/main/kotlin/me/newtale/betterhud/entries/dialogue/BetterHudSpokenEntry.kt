@@ -1,5 +1,6 @@
 package me.newtale.betterhud.entries.dialogue
 
+import com.typewritermc.basic.entries.dialogue.SpokenDialogueEntry as BasicSpokenDialogueEntry
 import com.typewritermc.core.books.pages.Colors
 import com.typewritermc.core.entries.Ref
 import com.typewritermc.core.entries.emptyRef
@@ -16,8 +17,10 @@ import com.typewritermc.engine.paper.entry.entries.ConstVar
 import com.typewritermc.engine.paper.entry.entries.DialogueEntry
 import com.typewritermc.engine.paper.entry.entries.SpeakerEntry
 import com.typewritermc.engine.paper.entry.entries.Var
+import com.typewritermc.engine.paper.utils.isFloodgate
 import com.typewritermc.engine.paper.utils.Sound
 import com.typewritermc.engine.paper.utils.playSound
+import com.typewritermc.basic.entries.dialogue.messengers.spoken.BedrockSpokenDialogueDialogueMessenger
 import me.newtale.betterhud.entries.dialogue.messenger.BetterHudSpokenDialogueMessenger
 import net.kyori.adventure.sound.SoundStop
 import org.bukkit.entity.Player
@@ -56,7 +59,21 @@ class BetterHudSpokenEntry(
     ) : DialogueEntry {
 
     override fun messenger(player: Player, context: InteractionContext): DialogueMessenger<BetterHudSpokenEntry> {
-        return BetterHudSpokenDialogueMessenger(player, context, this)
+        if (!player.isFloodgate) return BetterHudSpokenDialogueMessenger(player, context, this)
+
+        val bedrockEntry = BasicSpokenDialogueEntry(
+            id = id,
+            name = name,
+            criteria = criteria,
+            modifiers = modifiers,
+            triggers = triggers,
+            speaker = speaker,
+            text = text,
+            duration = duration,
+        )
+
+        @Suppress("UNCHECKED_CAST")
+        return BedrockSpokenDialogueDialogueMessenger(player, context, bedrockEntry) as DialogueMessenger<BetterHudSpokenEntry>
     }
     fun playDialogueSound(player: Player, context: InteractionContext) {
         player.playSound(sound.get(player, context), context)
