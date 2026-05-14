@@ -60,6 +60,9 @@ class BetterHudOptionEntry(
     @Help("Play selected sound when typing text")
     val typingSound: Var<Boolean> = ConstVar(false),
 
+    @Help("Allow infinite scrolling through options (loop back to start/end)")
+    val infiniteScroll: Var<Boolean> = ConstVar(true),
+
     @Help("The options to display")
     val options: List<Option> = emptyList(),
 

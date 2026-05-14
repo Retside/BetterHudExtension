@@ -35,6 +35,7 @@ val option_popup: String by snippet("betterhud.option.popup", "")
 val option_sound: String by snippet("betterhud.option.sound", "block.lever.click")
 val option_sound_volume: Float by snippet("betterhud.option.volume", 1f)
 val option_sound_pitch: Float by snippet("betterhud.option.pitch", 2f)
+val option_selected_prefix: String by snippet("betterhud.option.selected_prefix", ">>>")
 
 class BetterHudOptionDialogueMessenger(
     player: Player,
@@ -65,6 +66,7 @@ class BetterHudOptionDialogueMessenger(
     private var completedAnimation = false
 
     private var typingSound = false
+    private var infiniteScroll = true
     private var interactionContext = context
 
     private var hudPlayer: HudPlayer? = null
@@ -115,11 +117,11 @@ class BetterHudOptionDialogueMessenger(
 
             typeDuration = entry.duration.get(player)
             typingSound = entry.typingSound.get(player)
+            infiniteScroll = entry.infiniteScroll.get(player)
             popupId = entry.popupId.get(player).ifBlank { option_popup }
 
             val typingDuration = parsed.getTotalDuration(typingDurationType, typeDuration)
-            val optionsShowingDuration = Duration.ofMillis(usableOptions.size * 100L)
-            totalDuration = typingDuration + optionsShowingDuration
+            totalDuration = typingDuration
 
             val api = BetterHudAPI.inst()
 
@@ -183,8 +185,19 @@ class BetterHudOptionDialogueMessenger(
 
         event.isCancelled = true
 
-        var newIndex = (index + dif) % usableOptions.size
-        while (newIndex < 0) newIndex += usableOptions.size
+        val newIndexRaw = index + dif
+
+        val newIndex = if (infiniteScroll) {
+            var result = newIndexRaw % usableOptions.size
+            while (result < 0) result += usableOptions.size
+            result
+        } else {
+            newIndexRaw.coerceIn(0, usableOptions.size - 1)
+        }
+
+        if (newIndex == selectedIndex && !infiniteScroll && (newIndexRaw < 0 || newIndexRaw >= usableOptions.size)) {
+            return
+        }
 
         selectedIndex = newIndex
 
@@ -310,9 +323,10 @@ class BetterHudOptionDialogueMessenger(
         val isComplete = typePercentage >= 1.0
 
         val optionsInfo = getOptionsInfo()
+        val allOptionsInfo = getAllOptionsInfo()
 
-        val previousOption = if (isComplete) getPreviousOption() else ""
-        val nextOption = if (isComplete) getNextOption() else ""
+        val previousOption = if (isComplete) getPreviousOption() else "---"
+        val nextOption = if (isComplete) getNextOption() else "---"
 
         event.variables.apply {
             put("speaker", speakerDisplayName)
@@ -374,6 +388,24 @@ class BetterHudOptionDialogueMessenger(
                 (isComplete && getPreviousIndex() != -1 && usableOptions.size > 1).toString()
             )
             put("typewriter_has_next", (isComplete && getNextIndex() != -1 && usableOptions.size > 1).toString())
+            put("all_options_count", usableOptions.size.toString())
+
+            val optionsPerPage = 3
+            val pageIndex = selectedIndex / optionsPerPage
+            val pageStart = pageIndex * optionsPerPage
+
+            for (position in 0 until optionsPerPage) {
+                val optionIndex = pageStart + position
+
+                if (optionIndex < usableOptions.size && optionIndex < allOptionsInfo.size) {
+                    val optionInfo = allOptionsInfo[optionIndex]
+                    put("all_option_${position}_text", optionInfo.text)
+                    put("all_option_${position}_prefix", if (optionInfo.isSelected) option_selected_prefix else "")
+                } else {
+                    put("all_option_${position}_text", "---")
+                    put("all_option_${position}_prefix", "")
+                }
+            }
         }
 
         entry.customVariables.forEach { (key, value) ->
@@ -389,7 +421,7 @@ class BetterHudOptionDialogueMessenger(
             val optionText = usableOptions[prevIndex].text.get(player).parsePlaceholders(player)
             optionText
         } else {
-            "-----"
+            "---"
         }
     }
 
@@ -399,7 +431,7 @@ class BetterHudOptionDialogueMessenger(
             val optionText = usableOptions[nextIndex].text.get(player).parsePlaceholders(player)
             optionText
         } else {
-            "-----"
+            "---"
         }
     }
 
@@ -407,12 +439,13 @@ class BetterHudOptionDialogueMessenger(
         if (usableOptions.isEmpty()) return -1
 
         return if (usableOptions.size == 1) {
-            -1 // Якщо тільки одна опція, немає попередньої
+            -1
         } else if (selectedIndex > 0) {
             selectedIndex - 1
-        } else {
-            // Циклічно повертаємося до останньої опції
+        } else if (infiniteScroll) {
             usableOptions.size - 1
+        } else {
+            -1
         }
     }
 
@@ -420,12 +453,13 @@ class BetterHudOptionDialogueMessenger(
         if (usableOptions.isEmpty()) return -1
 
         return if (usableOptions.size == 1) {
-            -1 // Якщо тільки одна опція, немає наступної
+            -1
         } else if (selectedIndex < usableOptions.size - 1) {
             selectedIndex + 1
-        } else {
-            // Циклічно повертаємося до першої опції
+        } else if (infiniteScroll) {
             0
+        } else {
+            -1
         }
     }
 
@@ -475,6 +509,35 @@ class BetterHudOptionDialogueMessenger(
                 )
             )
         }
+
+        return optionsInfo
+    }
+
+    private fun getAllOptionsInfo(): List<OptionInfo> {
+        val optionsPerPage = 3
+        val pageIndex = selectedIndex / optionsPerPage
+        val pageStart = pageIndex * optionsPerPage
+        val pageEnd = minOf(pageStart + optionsPerPage, usableOptions.size)
+
+        val optionsInfo = mutableListOf<OptionInfo>()
+
+        for (i in usableOptions.indices) {
+            val option = usableOptions[i]
+            val isOnCurrentPage = i in pageStart until pageEnd
+            val isVisible = isOnCurrentPage
+            val isSelected = i == selectedIndex
+
+            optionsInfo.add(
+                OptionInfo(
+                    text = option.text.get(player).parsePlaceholders(player),
+                    isSelected = isSelected,
+                    isVisible = isVisible,
+                    prefix = ""
+                )
+            )
+        }
+
+        completedAnimation = true
 
         return optionsInfo
     }
