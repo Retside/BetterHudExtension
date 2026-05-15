@@ -36,6 +36,7 @@ val option_sound: String by snippet("betterhud.option.sound", "block.lever.click
 val option_sound_volume: Float by snippet("betterhud.option.volume", 1f)
 val option_sound_pitch: Float by snippet("betterhud.option.pitch", 2f)
 val option_selected_prefix: String by snippet("betterhud.option.selected_prefix", ">>>")
+val option_placeholder: String by snippet("betterhud.option.placeholder", "---")
 
 class BetterHudOptionDialogueMessenger(
     player: Player,
@@ -117,7 +118,7 @@ class BetterHudOptionDialogueMessenger(
 
             typeDuration = entry.duration.get(player)
             typingSound = entry.typingSound.get(player)
-            infiniteScroll = entry.infiniteScroll.get(player)
+            infiniteScroll = !entry.disableInfiniteScroll.get(player)
             popupId = entry.popupId.get(player).ifBlank { option_popup }
 
             val typingDuration = parsed.getTotalDuration(typingDurationType, typeDuration)
@@ -325,8 +326,8 @@ class BetterHudOptionDialogueMessenger(
         val optionsInfo = getOptionsInfo()
         val allOptionsInfo = getAllOptionsInfo()
 
-        val previousOption = if (isComplete) getPreviousOption() else "---"
-        val nextOption = if (isComplete) getNextOption() else "---"
+        val previousOption = if (isComplete) getPreviousOption() else option_placeholder
+        val nextOption = if (isComplete) getNextOption() else option_placeholder
 
         event.variables.apply {
             put("speaker", speakerDisplayName)
@@ -402,7 +403,7 @@ class BetterHudOptionDialogueMessenger(
                     put("all_option_${position}_text", optionInfo.text)
                     put("all_option_${position}_prefix", if (optionInfo.isSelected) option_selected_prefix else "")
                 } else {
-                    put("all_option_${position}_text", "---")
+                    put("all_option_${position}_text", option_placeholder)
                     put("all_option_${position}_prefix", "")
                 }
             }
@@ -421,7 +422,7 @@ class BetterHudOptionDialogueMessenger(
             val optionText = usableOptions[prevIndex].text.get(player).parsePlaceholders(player)
             optionText
         } else {
-            "---"
+            option_placeholder
         }
     }
 
@@ -431,7 +432,7 @@ class BetterHudOptionDialogueMessenger(
             val optionText = usableOptions[nextIndex].text.get(player).parsePlaceholders(player)
             optionText
         } else {
-            "---"
+            option_placeholder
         }
     }
 
@@ -491,7 +492,7 @@ class BetterHudOptionDialogueMessenger(
 
             val prefix =
                 when {
-                    isSelected -> ">>>"
+                    isSelected -> ">"
                     i == 0 && selectedIndex > 1 && usableOptions.size > 4 -> "↑"
                     i == 3 &&
                             selectedIndex < usableOptions.size - 3 &&
@@ -524,14 +525,13 @@ class BetterHudOptionDialogueMessenger(
         for (i in usableOptions.indices) {
             val option = usableOptions[i]
             val isOnCurrentPage = i in pageStart until pageEnd
-            val isVisible = isOnCurrentPage
             val isSelected = i == selectedIndex
 
             optionsInfo.add(
                 OptionInfo(
                     text = option.text.get(player).parsePlaceholders(player),
                     isSelected = isSelected,
-                    isVisible = isVisible,
+                    isVisible = isOnCurrentPage,
                     prefix = ""
                 )
             )
