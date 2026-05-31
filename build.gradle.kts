@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "me.newtale"
-version = "0.9.0-beta-172"
+version = "0.9.0-beta-173"
 
 typewriter {
     namespace = "newtale"
@@ -21,7 +21,7 @@ typewriter {
             |Created by Ney.
             |Discord: ney___
             """.trimMargin()
-        engineVersion = "0.9.0-beta-172"
+        engineVersion = "0.9.0-beta-173"
         channel = com.typewritermc.moduleplugin.ReleaseChannel.BETA
         dependencies {
             paper()
