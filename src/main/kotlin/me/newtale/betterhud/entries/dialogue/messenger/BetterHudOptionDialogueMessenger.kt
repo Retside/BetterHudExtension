@@ -5,23 +5,20 @@ import com.typewritermc.core.utils.around
 import com.typewritermc.core.utils.loopingDistance
 import com.typewritermc.engine.paper.entry.Modifier
 import com.typewritermc.engine.paper.entry.dialogue.*
+import com.typewritermc.engine.paper.interaction.*
 import com.typewritermc.engine.paper.entry.entries.EventTrigger
 import com.typewritermc.engine.paper.entry.matches
 import com.typewritermc.engine.paper.extensions.placeholderapi.parsePlaceholders
 import com.typewritermc.engine.paper.snippets.snippet
-import kr.toxicity.hud.api.BetterHudAPI
+import com.typewritermc.engine.paper.utils.stripped
 import kr.toxicity.hud.api.bukkit.event.CustomPopupEvent
-import kr.toxicity.hud.api.bukkit.update.BukkitEventUpdateEvent
-import kr.toxicity.hud.api.player.HudPlayer
-import kr.toxicity.hud.api.popup.Popup
-import kr.toxicity.hud.api.popup.PopupUpdater
 import me.newtale.betterhud.entries.dialogue.BetterHudOptionEntry
 import me.newtale.betterhud.entries.dialogue.Option
 import me.newtale.betterhud.entries.dialogue.OptionContextKeys
+import me.newtale.betterhud.utils.BetterHudPopup
 import me.newtale.betterhud.utils.DelayedText
+import me.newtale.betterhud.utils.asPartialMiniMessageString
 import me.newtale.betterhud.utils.parseDelays
-import me.newtale.betterhud.utils.reconstructMiniMessageText
-import me.newtale.betterhud.utils.stripMiniMessage
 import net.kyori.adventure.key.Key
 import net.kyori.adventure.sound.Sound
 import org.bukkit.entity.Player
@@ -44,7 +41,7 @@ class BetterHudOptionDialogueMessenger(
     entry: BetterHudOptionEntry
 ) : DialogueMessenger<BetterHudOptionEntry>(player, context, entry) {
 
-    private var confirmationKeyHandler: ConfirmationKeyHandler? = null
+    private var confirmation: Confirmation? = null
     private var typeDuration = Duration.ZERO
 
     private var selectedIndex = 0
@@ -70,15 +67,9 @@ class BetterHudOptionDialogueMessenger(
     private var infiniteScroll = true
     private var interactionContext = context
 
-    private var hudPlayer: HudPlayer? = null
-    private var popup: Popup? = null
-    private var popupUpdater: PopupUpdater? = null
+    private var betterHudPopup: BetterHudPopup? = null
     private var lastDisplayedState = ""
     private var lastDisplayedText = ""
-    private var popupId = ""
-    private var isPopupShown = false
-
-    private var lastUpdateEvent: CustomPopupEvent? = null
 
     private val logger = Logger.getLogger("BetterHudDialogue")
 
@@ -96,7 +87,7 @@ class BetterHudOptionDialogueMessenger(
 
     private fun confirmationKeyText(): String {
         val key = confirmationKey
-        return "$key".lowercase().lowercase().replace('_', ' ')
+        return key.label(player)
     }
 
     override fun init() {
@@ -119,20 +110,18 @@ class BetterHudOptionDialogueMessenger(
             typeDuration = entry.duration.get(player)
             typingSound = entry.typingSound.get(player)
             infiniteScroll = !entry.disableInfiniteScroll.get(player)
-            popupId = entry.popupId.get(player).ifBlank { option_popup }
+            val popupId = entry.popupId.get(player).ifBlank { option_popup }
 
             val typingDuration = parsed.getTotalDuration(typingDurationType, typeDuration)
             totalDuration = typingDuration
 
-            val api = BetterHudAPI.inst()
+            betterHudPopup = BetterHudPopup(player, popupId).also {
+                if (!it.resolve()) {
+                    throw IllegalStateException("Could not resolve BetterHud popup '$popupId'")
+                }
+            }
 
-            hudPlayer = api.playerManager.getHudPlayer(player.uniqueId)
-                ?: throw IllegalStateException("HudPlayer not found")
-
-            popup = api.popupManager.getPopup(popupId)
-                ?: throw IllegalStateException("Popup '$popupId' not found")
-
-            confirmationKeyHandler = confirmationKey.handler(player) { completeOrFinish() }
+            confirmation = player.awaitConfirmation { completeOrFinish() }
 
             entry.playDialogueSound(player, context)
 
@@ -145,8 +134,7 @@ class BetterHudOptionDialogueMessenger(
     }
 
     private fun showPopupInitially() {
-        val hudPlayerRef = hudPlayer ?: return
-        val popupRef = popup ?: return
+        val popup = betterHudPopup ?: return
 
         try {
             val typePercentage =
@@ -157,20 +145,14 @@ class BetterHudOptionDialogueMessenger(
                 }
             val currentText = getCurrentText(typePercentage)
 
-            val event = createCustomPopupEvent()
-            val updateEvent = BukkitEventUpdateEvent(event, "dialogue_${System.currentTimeMillis()}")
-
-            popupUpdater = popupRef.show(updateEvent, hudPlayerRef)
-            isPopupShown = popupUpdater != null
-            lastUpdateEvent = event
+            popup.show(::addDialogueVariables)
             lastDisplayedText = currentText
 
-            if (!isPopupShown) {
+            if (!popup.isShown) {
                 logger.warning("Failed to show popup for ${player.name}")
             }
         } catch (e: Exception) {
             logger.warning("Failed to show popup initially for ${player.name}: ${e.message}")
-            isPopupShown = false
         }
     }
 
@@ -244,7 +226,7 @@ class BetterHudOptionDialogueMessenger(
         val currentText = getCurrentText(typePercentage)
 
         if (typingSound) {
-            val previousLength = stripMiniMessage(lastDisplayedText).length
+            val previousLength = lastDisplayedText.stripped().length
             val currentLength = currentText.length
 
             if (currentLength > previousLength && previousLength < rawText.length) {
@@ -266,7 +248,7 @@ class BetterHudOptionDialogueMessenger(
     }
 
     private fun updatePopupWithCurrentState(force: Boolean = false) {
-        if (!isPopupShown) return
+        if (betterHudPopup?.isShown != true) return
 
         val currentState = generateCurrentState()
 
@@ -281,35 +263,18 @@ class BetterHudOptionDialogueMessenger(
     }
 
     private fun updatePopup() {
-        val updater = popupUpdater ?: return
+        val popup = betterHudPopup ?: return
 
         try {
-            val event = lastUpdateEvent
-            if (event != null) {
-                addDialogueVariables(event)
-            }
-
-            val success = updater.update()
-
-            if (!success) {
-                logger.info("Popup update failed for ${player.name}")
-            }
+            popup.update(::addDialogueVariables)
         } catch (e: Exception) {
             logger.warning("Popup update error for ${player.name}: ${e.message}")
         }
     }
 
     private fun hidePopup() {
-        hudPlayer?.let { player -> popup?.hide(player) }
-        popupUpdater = null
-        isPopupShown = false
-        lastUpdateEvent = null
-    }
-
-    private fun createCustomPopupEvent(): CustomPopupEvent {
-        val event = CustomPopupEvent(player, popupId)
-        addDialogueVariables(event)
-        return event
+        betterHudPopup?.hide()
+        betterHudPopup = null
     }
 
     private fun addDialogueVariables(event: CustomPopupEvent) {
@@ -543,12 +508,7 @@ class BetterHudOptionDialogueMessenger(
     }
 
     private fun getCurrentText(progress: Double): String {
-        if (progress >= 1.0) return parsedText
-
-        val visibleChars = (rawText.length * progress).toInt().coerceIn(0, rawText.length)
-        return if (visibleChars > 0) {
-            reconstructMiniMessageText(parsedText, visibleChars)
-        } else ""
+        return parsedText.asPartialMiniMessageString(progress, player)
     }
 
     private fun getCurrentTextLength(progress: Double): Int {
@@ -562,9 +522,7 @@ class BetterHudOptionDialogueMessenger(
 
         hidePopup()
 
-        confirmationKeyHandler?.dispose()
-        confirmationKeyHandler = null
-        hudPlayer = null
-        popup = null
+        confirmation?.dispose()
+        confirmation = null
     }
 }

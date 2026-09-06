@@ -5,9 +5,9 @@ A Typewriter extension that integrates BetterHud's popup and pointer systems, en
 ## Features
 
 - **Spoken Dialogue** - NPC dialogue rendered through BetterHud popups with typewriter animation and typing sounds
-- **Option Dialogue** - Player choice dialogues with scroll-wheel navigation, per-option criteria and triggers
+- **Option Dialogue** - Player choice dialogues with scroll-wheel navigation, per-option criteria, and triggers
 - **Cinematic Dialogue** - Timeline-based dialogue sequences tied to Typewriter's cinematic system
-- **Compass Points** - Add and remove BetterHud quest markers via actions or automatically based on tracked quest
+- **Compass Points** - Add and remove BetterHud quest markers via actions or automatically based on a tracked quest
 - **Quest Compass Audience** - Automatically shows a compass point to players who are tracking a specific quest
 - **Custom Variables** - Pass any dynamic data to your popups with full PlaceholderAPI support
 
@@ -16,7 +16,6 @@ A Typewriter extension that integrates BetterHud's popup and pointer systems, en
 - [Paper](https://papermc.io/)
 - [Typewriter](https://github.com/gabber235/Typewriter)
 - [BetterHud](https://github.com/toxicity188/BetterHud)
-- Java 21
 
 ## Documentation
 

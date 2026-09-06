@@ -1,10 +1,10 @@
 plugins {
     kotlin("jvm") version "2.3.0"
-    id("com.typewritermc.module-plugin") version "2.1.0"
+    id("com.typewritermc.module-plugin") version "2.2.0"
 }
 
 group = "me.newtale"
-version = "0.9.0-beta-175"
+version = "0.9.0-beta-176"
 
 typewriter {
     namespace = "newtale"
@@ -21,7 +21,7 @@ typewriter {
             |Created by Ney.
             |Discord: ney___
             """.trimMargin()
-        engineVersion = "0.9.0-beta-175"
+        engineVersion = "0.9.0-beta-176"
         channel = com.typewritermc.moduleplugin.ReleaseChannel.BETA
         dependencies {
             paper()
@@ -35,6 +35,8 @@ typewriter {
 
 repositories {
     mavenCentral()
+    maven("https://maven.typewritermc.com/beta")
+    maven("https://maven.typewritermc.com/external")
 }
 
 dependencies {

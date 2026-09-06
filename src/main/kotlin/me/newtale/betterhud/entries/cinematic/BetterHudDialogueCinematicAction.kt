@@ -13,16 +13,11 @@ import com.typewritermc.engine.paper.utils.*
 import com.typewritermc.engine.paper.utils.GenericPlayerStateProvider.EXP
 import com.typewritermc.engine.paper.utils.GenericPlayerStateProvider.LEVEL
 import kotlinx.coroutines.Dispatchers
-import kr.toxicity.hud.api.BetterHudAPI
 import kr.toxicity.hud.api.bukkit.event.CustomPopupEvent
-import kr.toxicity.hud.api.bukkit.update.BukkitEventUpdateEvent
-import kr.toxicity.hud.api.player.HudPlayer
-import kr.toxicity.hud.api.popup.Popup
-import kr.toxicity.hud.api.popup.PopupUpdater
 import me.newtale.betterhud.utils.DelayedText
+import me.newtale.betterhud.utils.BetterHudPopup
+import me.newtale.betterhud.utils.asPartialMiniMessageString
 import me.newtale.betterhud.utils.parseDelays
-import me.newtale.betterhud.utils.reconstructMiniMessageText
-import me.newtale.betterhud.utils.stripMiniMessage
 import net.kyori.adventure.sound.SoundStop
 import org.bukkit.entity.Player
 import java.time.Duration
@@ -66,16 +61,11 @@ class BetterHudDialogueCinematicAction(
     private var state: PlayerState? = null
     private var displayText = ""
 
-    private var currentHudPlayer: HudPlayer? = null
-    private var currentPopup: Popup? = null
-    private var currentPopupUpdater: PopupUpdater? = null
-    private var isPopupShown = false
-    private var lastUpdateEvent: CustomPopupEvent? = null
+    private var currentPopup: BetterHudPopup? = null
 
     private val logger = Logger.getLogger("BetterHudCinematic")
 
     private var speakerDisplayName = ""
-    private var currentPopupId = ""
     private var lastDisplayedText = ""
     private var lastDisplayedPercentage = -1.0
     private var lastVisibleChars = 0
@@ -152,7 +142,7 @@ class BetterHudDialogueCinematicAction(
             }
 
         val currentText = getCurrentText(displayText, finalPercentage)
-        val rawText = stripMiniMessage(displayText)
+        val rawText = displayText.stripped()
 
         val shouldPlayTypingSound = segment.typingSound.get(player)
         if (shouldPlayTypingSound) {
@@ -204,14 +194,12 @@ class BetterHudDialogueCinematicAction(
     private fun setupSegmentPopup(segment: BetterHudDialogueSegment) {
         try {
             val segmentPopupId = segment.popupId.get(player)
-            currentPopupId = segmentPopupId.ifBlank { globalPopupId.get(player) }
-
-            val api = BetterHudAPI.inst()
-            currentHudPlayer = api.playerManager.getHudPlayer(player.uniqueId)
-                ?: throw IllegalStateException("HudPlayer not found")
-
-            currentPopup = api.popupManager.getPopup(currentPopupId)
-                ?: throw IllegalStateException("Popup '$currentPopupId' not found")
+            val popupId = segmentPopupId.ifBlank { globalPopupId.get(player) }
+            currentPopup = BetterHudPopup(player, popupId).also {
+                if (!it.resolve()) {
+                    throw IllegalStateException("Could not resolve BetterHud popup '$popupId'")
+                }
+            }
         } catch (e: Exception) {
             logger.warning(
                 "BetterHud popup setup error for segment in ${player.name}: ${e.message}"
@@ -221,11 +209,8 @@ class BetterHudDialogueCinematicAction(
     }
 
     private fun resetPopupState() {
-        currentHudPlayer = null
+        currentPopup?.hide()
         currentPopup = null
-        currentPopupUpdater = null
-        isPopupShown = false
-        lastUpdateEvent = null
     }
 
     private fun displayBetterHudDialogue(
@@ -235,76 +220,15 @@ class BetterHudDialogueCinematicAction(
         displayPercentage: Double,
         segment: BetterHudDialogueSegment
     ) {
-        val hudPlayerRef = currentHudPlayer ?: return
-        val popupRef = currentPopup ?: return
+        val popup = currentPopup ?: return
 
         try {
-            if (!isPopupShown) {
-                showPopupInitially(
-                    hudPlayerRef,
-                    popupRef,
-                    text,
-                    displayPercentage,
-                    speakerName,
-                    segment
-                )
-            } else {
-                updateExistingPopup(text, displayPercentage, speakerName, segment)
+            popup.showOrUpdate { event ->
+                addDialogueVariables(event, text, displayPercentage, speakerName, segment)
             }
         } catch (e: Exception) {
             logger.warning("Popup display error for ${player.name}: ${e.message}")
         }
-    }
-
-    private fun showPopupInitially(
-        hudPlayerRef: HudPlayer,
-        popupRef: Popup,
-        text: String,
-        displayPercentage: Double,
-        speakerName: String,
-        segment: BetterHudDialogueSegment
-    ) {
-        val event = createCustomPopupEvent(text, displayPercentage, speakerName, segment)
-        val updateEvent = BukkitEventUpdateEvent(event, "cinematic_dialogue_${System.currentTimeMillis()}")
-
-        currentPopupUpdater = popupRef.show(updateEvent, hudPlayerRef)
-        isPopupShown = currentPopupUpdater != null
-        lastUpdateEvent = event
-
-        if (!isPopupShown) {
-            logger.warning("Failed to show popup for ${player.name}")
-        }
-    }
-
-    private fun updateExistingPopup(
-        text: String,
-        displayPercentage: Double,
-        speakerName: String,
-        segment: BetterHudDialogueSegment
-    ) {
-        val updater = currentPopupUpdater ?: return
-
-        val event = lastUpdateEvent
-        if (event != null) {
-            addDialogueVariables(event, text, displayPercentage, speakerName, segment)
-        }
-
-        val success = updater.update()
-
-        if (!success) {
-            logger.info("Popup update failed, attempting to recreate for ${player.name}")
-        }
-    }
-
-    private fun createCustomPopupEvent(
-        text: String,
-        displayPercentage: Double,
-        speakerName: String,
-        segment: BetterHudDialogueSegment
-    ): CustomPopupEvent {
-        val event = CustomPopupEvent(player, currentPopupId)
-        addDialogueVariables(event, text, displayPercentage, speakerName, segment)
-        return event
     }
 
     private fun addDialogueVariables(
@@ -315,7 +239,7 @@ class BetterHudDialogueCinematicAction(
         segment: BetterHudDialogueSegment
     ) {
         val currentText = getCurrentText(fullText, progress)
-        val rawText = stripMiniMessage(fullText)
+        val rawText = fullText.stripped()
         val isComplete = progress >= 1.0
 
         event.variables.apply {
@@ -349,14 +273,7 @@ class BetterHudDialogueCinematicAction(
     }
 
     private fun getCurrentText(fullText: String, progress: Double): String {
-        if (progress >= 1.0) return fullText
-
-        val rawText = stripMiniMessage(fullText)
-        val visibleChars = (rawText.length * progress).toInt().coerceIn(0, rawText.length)
-
-        return if (visibleChars > 0) {
-            reconstructMiniMessageText(fullText, visibleChars)
-        } else ""
+        return fullText.asPartialMiniMessageString(progress, player)
     }
 
     private fun getCurrentTextLength(rawText: String, progress: Double): Int {
@@ -364,7 +281,8 @@ class BetterHudDialogueCinematicAction(
     }
 
     private fun hideCurrentPopup() {
-        currentHudPlayer?.let { player -> currentPopup?.hide(player) }
+        currentPopup?.hide()
+        currentPopup = null
     }
 
     override suspend fun teardown() {

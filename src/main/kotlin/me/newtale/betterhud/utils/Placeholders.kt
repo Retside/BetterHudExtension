@@ -1,6 +1,7 @@
 package me.newtale.betterhud.utils
 
 import com.typewritermc.engine.paper.entry.dialogue.TypingDurationType
+import com.typewritermc.engine.paper.utils.stripped
 import java.time.Duration
 
 data class TextDelay(val position: Int, val duration: Duration)
@@ -94,7 +95,7 @@ fun parseDelays(text: String): DelayedText {
     }
 
     val textWithoutDelays = sb.toString()
-    val rawTextWithoutDelays = stripMiniMessage(textWithoutDelays)
+    val rawTextWithoutDelays = textWithoutDelays.stripped()
 
     val finalDelays = mutableListOf<TextDelay>()
     val delayMap = delays.groupBy { it.position }
