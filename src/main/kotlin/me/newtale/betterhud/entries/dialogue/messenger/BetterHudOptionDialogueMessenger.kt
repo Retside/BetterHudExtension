@@ -86,8 +86,7 @@ class BetterHudOptionDialogueMessenger(
         }
 
     private fun confirmationKeyText(): String {
-        val key = confirmationKey
-        return key.label(player)
+        return confirmationKey.name.lowercase().replace('_', ' ')
     }
 
     override fun init() {
